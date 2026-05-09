@@ -24,6 +24,12 @@
     <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(0,0,0,0.2)"/>
     </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff9500"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#34c759"/>
+    </marker>
 
     <!-- Gradient backgrounds -->
     <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
@@ -134,92 +140,63 @@
   <line x1="640" y1="175" x2="716" y2="175" stroke="#af52de" stroke-width="2" marker-end="url(#arrow)" opacity="0.5"/>
 
   <!-- ═══════════════════════════════════════ -->
-  <!-- Connector: Desktop → Cloud              -->
+  <!-- Connector: Python → storage / APIs      -->
   <!-- ═══════════════════════════════════════ -->
-  <line x1="450" y1="326" x2="450" y2="380" stroke="#007aff" stroke-width="2" stroke-dasharray="6 4" opacity="0.35"/>
-  <rect x="412" y="342" width="76" height="22" rx="11" fill="rgba(0,122,255,0.06)" stroke="rgba(0,122,255,0.15)" stroke-width="1"/>
-  <text x="450" y="357" class="font" font-size="10" font-weight="600" fill="#007aff" text-anchor="middle">Cloud Mode</text>
+  <line x1="520" y1="294" x2="174" y2="424" stroke="#ff9500" stroke-width="2" stroke-dasharray="6 4" opacity="0.65" marker-end="url(#arrow-orange)"/>
+  <line x1="520" y1="294" x2="431" y2="424" stroke="#007aff" stroke-width="2" stroke-dasharray="6 4" opacity="0.55" marker-end="url(#arrow)"/>
+  <line x1="520" y1="294" x2="716" y2="424" stroke="#34c759" stroke-width="2" opacity="0.65" marker-end="url(#arrow-green)"/>
+  <rect x="378" y="334" width="144" height="22" rx="11" fill="rgba(0,0,0,0.04)" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+  <text x="450" y="349" class="font" font-size="10" font-weight="600" fill="#6e6e73" text-anchor="middle">disk · HTTPS · WS</text>
 
   <!-- ═══════════════════════════════════════ -->
-  <!-- Google Cloud Platform region            -->
+  <!-- Local data · APIs · browser bridge      -->
   <!-- ═══════════════════════════════════════ -->
   <rect x="40" y="380" width="820" height="260" rx="20" ry="20"
         fill="rgba(255,255,255,0.55)" stroke="rgba(0,0,0,0.06)" stroke-width="1"
         filter="url(#glass-shadow)"/>
   <rect x="41" y="381" width="818" height="258" rx="19" ry="19"
         fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
-  <text x="68" y="408" class="font" font-size="11" font-weight="600" fill="#86868b" letter-spacing="0.8">GOOGLE CLOUD PLATFORM</text>
+  <text x="68" y="408" class="font" font-size="11" font-weight="600" fill="#86868b" letter-spacing="0.8">LOCAL DATA · GOOGLE APIs · BROWSER BRIDGE</text>
 
-  <!-- Cloud Run node -->
-  <rect x="72" y="424" width="220" height="180" rx="16" ry="16"
-        fill="rgba(255,255,255,0.7)" stroke="rgba(0,122,255,0.15)" stroke-width="1"
+  <!-- Local disk node -->
+  <rect x="72" y="424" width="205" height="188" rx="16" ry="16"
+        fill="rgba(255,255,255,0.7)" stroke="rgba(255,149,0,0.22)" stroke-width="1"
         filter="url(#node-shadow)"/>
-  <rect x="72" y="424" width="220" height="4" rx="2" fill="#007aff" opacity="0.6"/>
+  <rect x="72" y="424" width="205" height="4" rx="2" fill="#ff9500" opacity="0.65"/>
+  <ellipse cx="98" cy="452" rx="10" ry="5" fill="none" stroke="#ff9500" stroke-width="1.5"/>
+  <line x1="88" y1="452" x2="88" y2="464" stroke="#ff9500" stroke-width="1.5"/>
+  <line x1="108" y1="452" x2="108" y2="464" stroke="#ff9500" stroke-width="1.5"/>
+  <ellipse cx="98" cy="464" rx="10" ry="5" fill="none" stroke="#ff9500" stroke-width="1.5"/>
+  <text x="118" y="458" class="font" font-size="15" font-weight="600" fill="#1d1d1f">Local data</text>
+  <text x="92" y="486" class="mono" font-size="10" font-weight="500" fill="#86868b">MOONWALK_DATA_DIR</text>
+  <text x="92" y="506" class="font" font-size="12" font-weight="400" fill="#6e6e73">sessions · vault · screenshots</text>
+  <text x="92" y="526" class="font" font-size="12" font-weight="400" fill="#6e6e73">plans · milestones · memories</text>
+  <text x="92" y="546" class="font" font-size="12" font-weight="400" fill="#6e6e73">runtime_paths.py</text>
 
-  <!-- Cloud icon -->
-  <path d="M100 448 C96 440, 106 434, 112 438 C114 432, 126 432, 128 438 C134 434, 142 440, 138 448 Z"
-        fill="none" stroke="#007aff" stroke-width="1.5"/>
-
-  <text x="148" y="452" class="font" font-size="15" font-weight="600" fill="#1d1d1f">Cloud Run</text>
-  <text x="92" y="478" class="font" font-size="12" font-weight="400" fill="#6e6e73">Auth (GCP ID + shared key)</text>
-  <text x="92" y="496" class="font" font-size="12" font-weight="400" fill="#6e6e73">Per-user agent pool</text>
-  <text x="92" y="514" class="font" font-size="12" font-weight="400" fill="#6e6e73">Auto-eviction (10 min)</text>
-  <text x="92" y="532" class="font" font-size="12" font-weight="400" fill="#6e6e73">Health endpoint</text>
-
-  <rect x="92" y="548" width="60" height="22" rx="6" fill="rgba(0,122,255,0.08)"/>
-  <text x="122" y="563" class="mono" font-size="10" font-weight="600" fill="#007aff" text-anchor="middle">:8080</text>
-
-  <!-- Firestore node -->
-  <rect x="360" y="424" width="160" height="100" rx="16" ry="16"
-        fill="rgba(255,255,255,0.7)" stroke="rgba(255,149,0,0.15)" stroke-width="1"
+  <!-- Google APIs node -->
+  <rect x="297" y="424" width="268" height="188" rx="16" ry="16"
+        fill="rgba(255,255,255,0.7)" stroke="rgba(0,122,255,0.18)" stroke-width="1"
         filter="url(#node-shadow)"/>
-  <rect x="360" y="424" width="160" height="4" rx="2" fill="#ff9500" opacity="0.6"/>
-  <!-- DB icon -->
-  <ellipse cx="388" cy="448" rx="8" ry="4" fill="none" stroke="#ff9500" stroke-width="1.5"/>
-  <line x1="380" y1="448" x2="380" y2="456" stroke="#ff9500" stroke-width="1.5"/>
-  <line x1="396" y1="448" x2="396" y2="456" stroke="#ff9500" stroke-width="1.5"/>
-  <ellipse cx="388" cy="456" rx="8" ry="4" fill="none" stroke="#ff9500" stroke-width="1.5"/>
-
-  <text x="404" y="454" class="font" font-size="14" font-weight="600" fill="#1d1d1f">Firestore</text>
-  <text x="380" y="480" class="font" font-size="12" font-weight="400" fill="#6e6e73">Conversation memory</text>
-  <text x="380" y="498" class="font" font-size="12" font-weight="400" fill="#6e6e73">User preferences</text>
-
-  <!-- GCS node -->
-  <rect x="360" y="540" width="160" height="70" rx="16" ry="16"
-        fill="rgba(255,255,255,0.7)" stroke="rgba(0,122,255,0.12)" stroke-width="1"
-        filter="url(#node-shadow)"/>
-  <rect x="360" y="540" width="160" height="4" rx="2" fill="#5ac8fa" opacity="0.6"/>
-  <!-- Bucket icon -->
-  <rect x="382" y="562" width="14" height="12" rx="2" fill="none" stroke="#5ac8fa" stroke-width="1.5"/>
-  <line x1="382" y1="568" x2="396" y2="568" stroke="#5ac8fa" stroke-width="1" opacity="0.5"/>
-
-  <text x="404" y="574" class="font" font-size="14" font-weight="600" fill="#1d1d1f">GCS</text>
-  <text x="380" y="596" class="font" font-size="12" font-weight="400" fill="#6e6e73">File storage + uploads</text>
+  <rect x="297" y="424" width="268" height="4" rx="2" fill="#007aff" opacity="0.55"/>
+  <path d="M332 448 C328 440, 338 434, 344 438 C346 432, 358 432, 360 438 C366 434, 374 440, 370 448 Z"
+        fill="none" stroke="#007aff" stroke-width="1.4"/>
+  <text x="388" y="452" class="font" font-size="15" font-weight="600" fill="#1d1d1f">Google APIs</text>
+  <text x="318" y="478" class="font" font-size="12" font-weight="400" fill="#6e6e73">Gemini — LLM, routing, vision</text>
+  <text x="318" y="498" class="font" font-size="12" font-weight="400" fill="#6e6e73">Cloud TTS — Neural2 streaming</text>
+  <text x="318" y="518" class="font" font-size="12" font-weight="400" fill="#6e6e73">Outbound HTTPS only · no Cloud Run</text>
+  <text x="318" y="542" class="mono" font-size="10" font-weight="500" fill="#86868b">providers/ · voice/tts.py</text>
 
   <!-- Chrome Extension node -->
-  <rect x="600" y="424" width="230" height="160" rx="16" ry="16"
+  <rect x="593" y="424" width="247" height="188" rx="16" ry="16"
         fill="rgba(255,255,255,0.7)" stroke="rgba(52,199,89,0.15)" stroke-width="1"
         filter="url(#node-shadow)"/>
-  <rect x="600" y="424" width="230" height="4" rx="2" fill="#34c759" opacity="0.6"/>
-
-  <!-- Chrome icon (simplified) -->
-  <circle cx="626" cy="450" r="9" fill="none" stroke="#34c759" stroke-width="1.5"/>
-  <circle cx="626" cy="450" r="3.5" fill="#34c759" opacity="0.3"/>
-
-  <text x="642" y="455" class="font" font-size="14" font-weight="600" fill="#1d1d1f">Chrome Extension</text>
-  <text x="620" y="480" class="font" font-size="12" font-weight="400" fill="#6e6e73">Manifest V3 service worker</text>
-  <text x="620" y="498" class="font" font-size="12" font-weight="400" fill="#6e6e73">Content script injection</text>
-  <text x="620" y="516" class="font" font-size="12" font-weight="400" fill="#6e6e73">Web search + extraction</text>
-  <text x="620" y="534" class="font" font-size="12" font-weight="400" fill="#6e6e73">Form fill + page interaction</text>
-
-  <rect x="620" y="550" width="80" height="22" rx="6" fill="rgba(52,199,89,0.08)"/>
-  <text x="660" y="565" class="mono" font-size="10" font-weight="600" fill="#34c759" text-anchor="middle">WS :8765</text>
-
-  <!-- ── Arrows in cloud ── -->
-  <!-- Cloud Run → Firestore -->
-  <line x1="292" y1="474" x2="360" y2="474" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
-  <!-- Cloud Run → GCS -->
-  <line x1="292" y1="540" x2="360" y2="565" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
-  <!-- Cloud Run → Extension -->
-  <line x1="292" y1="510" x2="600" y2="510" stroke="#34c759" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.4"/>
+  <rect x="593" y="424" width="247" height="4" rx="2" fill="#34c759" opacity="0.6"/>
+  <circle cx="619" cy="452" r="9" fill="none" stroke="#34c759" stroke-width="1.5"/>
+  <circle cx="619" cy="452" r="3.5" fill="#34c759" opacity="0.3"/>
+  <text x="635" y="457" class="font" font-size="14" font-weight="600" fill="#1d1d1f">Chrome Extension</text>
+  <text x="613" y="482" class="font" font-size="12" font-weight="400" fill="#6e6e73">Manifest V3 · DOM snapshots</text>
+  <text x="613" y="502" class="font" font-size="12" font-weight="400" fill="#6e6e73">Page actions · logged-in browser</text>
+  <text x="613" y="522" class="font" font-size="12" font-weight="400" fill="#6e6e73">browser_bridge_server.py</text>
+  <rect x="613" y="548" width="86" height="22" rx="6" fill="rgba(52,199,89,0.08)"/>
+  <text x="656" y="563" class="mono" font-size="10" font-weight="600" fill="#34c759" text-anchor="middle">WS :8765</text>
 </svg>
