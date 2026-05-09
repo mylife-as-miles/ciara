@@ -25,6 +25,11 @@
       <stop offset="0%" stop-color="#ff2d55"/>
       <stop offset="100%" stop-color="#ff6482"/>
     </linearGradient>
+    <!-- Yellow / amber accent -->
+    <linearGradient id="accentYellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffcc00"/>
+      <stop offset="100%" stop-color="#ffd633"/>
+    </linearGradient>
     <!-- Dark card fill -->
     <linearGradient id="darkCard" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#1d1d1f"/>
@@ -49,6 +54,9 @@
     </marker>
     <marker id="arrowMuted" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" fill="#6e6e73"/>
+    </marker>
+    <marker id="arrowPeach" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ff2d55"/>
     </marker>
   </defs>
 
@@ -196,59 +204,72 @@
   <line x1="750" y1="383" x2="790" y2="383" stroke="#6e6e73" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrowMuted)"/>
 
   <!-- ═══════════════════════════════════════════ -->
-  <!-- ROW 3: External Services                    -->
+  <!-- ROW 3: Network APIs & local I/O             -->
   <!-- ═══════════════════════════════════════════ -->
 
   <!-- Gemini API -->
   <g filter="url(#shadow)">
-    <rect x="100" y="600" width="220" height="80" rx="16" fill="white" stroke="rgba(175,82,222,0.25)" stroke-width="1.5"/>
-    <rect x="120" y="618" width="36" height="36" rx="10" fill="url(#accentPurple)" opacity="0.12"/>
-    <text x="138" y="641" text-anchor="middle" font-size="20">✦</text>
-    <text x="230" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Gemini API</text>
-    <text x="230" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">Flash · Pro · Vision</text>
-    <text x="230" y="664" text-anchor="middle" font-size="9" fill="#af52de">generativelanguage.googleapis.com</text>
+    <rect x="70" y="600" width="215" height="80" rx="16" fill="white" stroke="rgba(175,82,222,0.25)" stroke-width="1.5"/>
+    <rect x="90" y="618" width="36" height="36" rx="10" fill="url(#accentPurple)" opacity="0.12"/>
+    <text x="108" y="641" text-anchor="middle" font-size="20">✦</text>
+    <text x="198" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Gemini API</text>
+    <text x="198" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">Flash · Pro · Vision · routing</text>
+    <text x="198" y="664" text-anchor="middle" font-size="9" fill="#af52de">generativelanguage.googleapis.com</text>
   </g>
 
-  <!-- Google Cloud Platform -->
+  <!-- Cloud TTS -->
   <g filter="url(#shadow)">
-    <rect x="380" y="600" width="220" height="80" rx="16" fill="white" stroke="rgba(52,199,89,0.25)" stroke-width="1.5"/>
-    <rect x="400" y="618" width="36" height="36" rx="10" fill="url(#accentGreen)" opacity="0.12"/>
-    <text x="418" y="641" text-anchor="middle" font-size="20">☁</text>
-    <text x="510" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Google Cloud</text>
-    <text x="510" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">TTS Neural2 · GCS · Firestore</text>
-    <text x="510" y="664" text-anchor="middle" font-size="9" fill="#34c759">texttospeech · storage · firestore</text>
+    <rect x="305" y="600" width="195" height="80" rx="16" fill="white" stroke="rgba(255,45,85,0.22)" stroke-width="1.5"/>
+    <rect x="325" y="618" width="36" height="36" rx="10" fill="url(#accentPeach)" opacity="0.12"/>
+    <text x="343" y="641" text-anchor="middle" font-size="18">🔊</text>
+    <text x="418" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Cloud TTS</text>
+    <text x="418" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">Neural2 · streamed OGG/Opus</text>
+    <text x="418" y="664" text-anchor="middle" font-size="9" fill="#ff2d55">texttospeech.googleapis.com</text>
+  </g>
+
+  <!-- Local disk -->
+  <g filter="url(#shadow)">
+    <rect x="518" y="600" width="215" height="80" rx="16" fill="white" stroke="rgba(255,204,0,0.35)" stroke-width="1.5"/>
+    <rect x="538" y="618" width="36" height="36" rx="10" fill="url(#accentYellow)" opacity="0.14"/>
+    <text x="556" y="641" text-anchor="middle" font-size="18">💾</text>
+    <text x="646" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Local data</text>
+    <text x="646" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">MOONWALK_DATA_DIR</text>
+    <text x="646" y="664" text-anchor="middle" font-size="9" fill="#c9a227">sessions · vault · plans · screenshots</text>
   </g>
 
   <!-- Chrome Extension -->
   <g filter="url(#shadow)">
-    <rect x="660" y="600" width="220" height="80" rx="16" fill="white" stroke="rgba(0,122,255,0.20)" stroke-width="1.5"/>
-    <rect x="680" y="618" width="36" height="36" rx="10" fill="url(#accentBlue)" opacity="0.12"/>
-    <text x="698" y="641" text-anchor="middle" font-size="20">🧩</text>
-    <text x="790" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Chrome Extension</text>
-    <text x="790" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">DOM Snapshots · Page Actions</text>
-    <text x="790" y="664" text-anchor="middle" font-size="9" fill="#007aff">content_script.js · background.js</text>
+    <rect x="751" y="600" width="215" height="80" rx="16" fill="white" stroke="rgba(0,122,255,0.20)" stroke-width="1.5"/>
+    <rect x="771" y="618" width="36" height="36" rx="10" fill="url(#accentBlue)" opacity="0.12"/>
+    <text x="789" y="641" text-anchor="middle" font-size="20">🧩</text>
+    <text x="879" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Chrome Extension</text>
+    <text x="879" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">DOM snapshots · bridge :8765</text>
+    <text x="879" y="664" text-anchor="middle" font-size="9" fill="#007aff">content_script.js · background.js</text>
   </g>
 
   <!-- macOS APIs -->
   <g filter="url(#shadow)">
-    <rect x="920" y="600" width="140" height="80" rx="16" fill="white" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
-    <text x="990" y="636" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">macOS</text>
-    <text x="990" y="654" text-anchor="middle" font-size="10" fill="#6e6e73">AppleScript</text>
-    <text x="990" y="668" text-anchor="middle" font-size="10" fill="#6e6e73">Accessibility</text>
+    <rect x="986" y="600" width="114" height="80" rx="16" fill="white" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <text x="1043" y="636" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">macOS</text>
+    <text x="1043" y="654" text-anchor="middle" font-size="10" fill="#6e6e73">AppleScript</text>
+    <text x="1043" y="668" text-anchor="middle" font-size="10" fill="#6e6e73">Accessibility</text>
   </g>
 
   <!-- Arrows from backend → external services -->
-  <path d="M180,469 L180,500 L210,600" fill="none" stroke="#af52de" stroke-width="2" marker-end="url(#arrowPurple)"/>
-  <text x="165" y="540" font-size="9" fill="#af52de" font-weight="500">LLM calls</text>
+  <path d="M180,469 L180,530 L177.5,600" fill="none" stroke="#af52de" stroke-width="2" marker-end="url(#arrowPurple)"/>
+  <text x="155" y="545" font-size="9" fill="#af52de" font-weight="500">LLM calls</text>
 
-  <path d="M875,411 L875,470 L490,600" fill="none" stroke="#34c759" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
-  <text x="720" y="540" font-size="9" fill="#34c759" font-weight="500">TTS · Storage</text>
+  <path d="M875,411 L875,472 L402.5,472 L402.5,600" fill="none" stroke="#ff2d55" stroke-width="1.5" marker-end="url(#arrowPeach)"/>
+  <text x="620" y="460" font-size="9" fill="#ff2d55" font-weight="500">TTS synthesize</text>
 
-  <path d="M360,469 L360,500 L735,600" fill="none" stroke="#007aff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
-  <text x="500" y="504" font-size="9" fill="#007aff" font-weight="500">DOM bridge</text>
+  <path d="M875,469 L875,532 L625.5,532 L625.5,600" fill="none" stroke="#ffcc00" stroke-width="1.5" marker-end="url(#arrowMuted)"/>
+  <text x="740" y="520" font-size="9" fill="#c9a227" font-weight="500">read / write</text>
 
-  <path d="M470,469 L470,500 L960,600" fill="none" stroke="#6e6e73" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrowMuted)"/>
-  <text x="770" y="498" font-size="9" fill="#6e6e73">osascript</text>
+  <path d="M360,469 L360,532 L858.5,532 L858.5,600" fill="none" stroke="#007aff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+  <text x="610" y="505" font-size="9" fill="#007aff" font-weight="500">DOM bridge</text>
+
+  <path d="M470,469 L470,532 L1043,532 L1043,600" fill="none" stroke="#6e6e73" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrowMuted)"/>
+  <text x="810" y="505" font-size="9" fill="#6e6e73">osascript</text>
 
   <!-- Legend -->
   <g transform="translate(60, 740)">
@@ -257,8 +278,8 @@
     <text x="38" y="22" font-size="9" fill="#6e6e73">Data flow</text>
     <line x1="120" y1="18" x2="150" y2="18" stroke="#af52de" stroke-width="2"/>
     <text x="158" y="22" font-size="9" fill="#6e6e73">LLM / Agent</text>
-    <line x1="240" y1="18" x2="270" y2="18" stroke="#34c759" stroke-width="2"/>
-    <text x="278" y="22" font-size="9" fill="#6e6e73">Cloud services</text>
+    <line x1="240" y1="18" x2="270" y2="18" stroke="#ffcc00" stroke-width="2"/>
+    <text x="278" y="22" font-size="9" fill="#6e6e73">Local disk</text>
     <line x1="370" y1="18" x2="400" y2="18" stroke="#6e6e73" stroke-width="1.2" stroke-dasharray="4 3"/>
     <text x="408" y="22" font-size="9" fill="#6e6e73">Internal / optional</text>
   </g>
