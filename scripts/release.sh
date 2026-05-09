@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
-#  Moonwalk — Build, Sign, Notarize & Upload to GCS
+#  Moonwalk — Package extension & build macOS DMG (artifacts in dist/)
 # ═══════════════════════════════════════════════════════════════
 #
 #  One-command release pipeline:
 #    1. Package the Chrome extension
-#    2. Build the signed & notarized DMG
-#    3. Upload everything to GCS
+#    2. Build the signed & notarized (or unsigned) DMG
 #
 #  Usage:
 #    chmod +x scripts/release.sh
@@ -19,9 +18,6 @@
 #    export CSC_NAME="Developer ID Application: Your Name (TEAMID)"
 #
 #  Without these, the build will still produce a DMG — just unsigned.
-#
-#  For GCS upload:
-#    export GCP_PROJECT="your-project-id"
 # ═══════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -99,20 +95,6 @@ if [[ -z "$DMG" ]]; then
     fail "No DMG found in dist/ — build may have failed"
 fi
 info "✅ Built: $DMG"
-
-# ── Step 3: Upload to GCS ──
-
-banner "Step 3: Upload to GCS"
-
-if command -v gsutil &>/dev/null; then
-    node scripts/upload-gcs.mjs
-else
-    warn "gsutil not found — skipping GCS upload"
-    warn "Install: brew install --cask google-cloud-sdk"
-    echo ""
-    info "Your release artifacts are in dist/:"
-    ls -lh dist/*.dmg dist/*.zip 2>/dev/null || true
-fi
 
 banner "Release Complete! 🚀"
 echo ""

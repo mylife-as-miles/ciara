@@ -2,6 +2,8 @@
 
 > **Everything in one place** — from what Moonwalk is and how it was built, to how customers install it and how you run, manage, and ship it.
 
+This tree is **local-first**: the Python backend is `backend/servers/local_server.py`, and durable state lives on disk under `MOONWALK_DATA_DIR` (see `backend/runtime_paths.py`). There is **no** Cloud Run, Firestore, or GCS pipeline in this repository.
+
 ---
 
 ## Table of Contents
@@ -20,13 +22,12 @@
 9. [Project Structure](#9-project-structure)
 10. [How Moonwalk Works (Architecture)](#10-how-moonwalk-works-architecture)
 11. [The SPAV Agent Loop Explained](#11-the-spav-agent-loop-explained)
-12. [How Google Cloud is Used](#12-how-google-cloud-is-used)
+12. [Google APIs & Local Data](#12-google-apis--local-data)
 13. [How the Software Was Built](#13-how-the-software-was-built)
 14. [Building a DMG for Distribution](#14-building-a-dmg-for-distribution)
 15. [Code Signing & Notarization](#15-code-signing--notarization)
-16. [Distributing to Customers via GCS](#16-distributing-to-customers-via-gcs)
-17. [Cloud Deployment (GCP Cloud Run)](#17-cloud-deployment-gcp-cloud-run)
-18. [Running Tests](#18-running-tests)
+16. [Shipping Release Artifacts](#16-shipping-release-artifacts)
+17. [Running Tests](#17-running-tests)
 
 ---
 
@@ -352,14 +353,12 @@ cp backend/.env.example backend/.env
 | `GEMINI_ROUTING_MODEL` | `gemini-2.5-flash` | Classifies requests (FAST vs POWERFUL) |
 | `GEMINI_FALLBACK_MODEL` | `gemini-2.5-pro` | Emergency fallback on POWERFUL failure |
 
-### Optional — Cloud Mode
+### Optional — Local data & vault recall
 
 | Variable | Description |
 |----------|-------------|
-| `MOONWALK_CLOUD_URL` | WebSocket URL of Cloud Run brain (enables cloud mode via `mac_client.py`) |
-| `MOONWALK_CLOUD_TOKEN` | Auth token matching the Cloud Run `AUTH_SHARED_SECRET` |
-| `GCP_PROJECT` | Google Cloud project ID |
-| `MOONWALK_GCS_BUCKET` | GCS bucket name for memory storage |
+| `MOONWALK_DATA_DIR` | Root folder for sessions, vault, screenshots, plans, milestones, memories (Electron sets this under app userData by default) |
+| `MOONWALK_DISABLE_LOCAL_VAULT_RAG` | Set to `1` to skip TF-IDF vault recall prefix on agent prompts |
 
 ### Optional — Voice / TTS
 
@@ -394,9 +393,8 @@ Moonwalk/
 │
 ├── backend/
 │   ├── servers/
-│   │   ├── local_server.py      # Main local server: audio + wake word + agent
-│   │   ├── cloud_server.py      # Cloud Run server: agent brain only (no audio/tools)
-│   │   ├── mac_client.py        # Local client for cloud mode: audio + tools, no AI
+│   │   ├── local_server.py      # Main desktop server: audio + wake word + agent
+│   │   ├── mac_client.py        # Thin entry shim (starts local_server)
 │   │   └── browser_bridge_server.py  # WebSocket server for Chrome extension
 │   │
 │   ├── agent/
@@ -408,8 +406,7 @@ Moonwalk/
 │   │   ├── verifier.py          # Post-action verification engine
 │   │   ├── world_state.py       # Typed desktop context + intent classification
 │   │   ├── memory.py            # Local memory (conversation, vault, profile, tasks)
-│   │   ├── cloud_memory.py      # Cloud memory (Firestore + GCS, same API)
-│   │   ├── rag.py               # RAG engine (Gemini embeddings + Firestore vector search)
+│   │   ├── rag.py               # Vault formatting helpers; optional Gemini embeddings
 │   │   ├── glance.py            # Parallel screen perception
 │   │   └── constants.py         # Shared tool classification sets
 │   │
@@ -432,7 +429,7 @@ Moonwalk/
 │   │   ├── file_tools.py        # File read/write/search
 │   │   ├── gworkspace_tools.py  # Google Workspace (Gmail, Drive, Docs, Calendar)
 │   │   ├── vault_tools.py       # Vault memory tools
-│   │   ├── cloud_tools.py       # Cloud-only stub tools
+│   │   ├── cloud_tools.py       # Legacy cloud stubs (unused in desktop-only builds)
 │   │   └── registry.py          # Global tool registry + @registry.tool decorator
 │   │
 │   ├── multi_agent/
@@ -442,8 +439,8 @@ Moonwalk/
 │   ├── voice/
 │   │   └── tts.py               # Streamed Google Cloud TTS (Neural2, OGG/Opus)
 │   │
-│   ├── auth.py                  # Dual-mode auth (GCP ID token + shared secret)
-│   ├── runtime_state.py         # Per-user session state registry
+│   ├── runtime_state.py         # Shared cancel flag / runtime store
+│   ├── runtime_paths.py         # MOONWALK_DATA_DIR folder layout
 │   └── requirements.txt         # Python dependencies
 │
 ├── chrome_extension/
@@ -459,12 +456,9 @@ Moonwalk/
 │   └── notarize.cjs             # Apple notarization afterSign hook
 │
 ├── scripts/
-│   ├── release.sh               # Full release pipeline: package → build → upload
-│   ├── upload-gcs.mjs           # Upload DMG + extension zip to GCS
+│   ├── release.sh               # Package extension + build DMG (artifacts in dist/)
 │   └── package-extension.mjs    # Package Chrome extension into customer zip
-│
-└── deploy/
-    └── deploy_gcp.sh            # One-command GCP Cloud Run deployment script
+
 ```
 
 ---
@@ -627,9 +621,9 @@ Only ~5–10% of requests ever go to FAST. The router is deliberately biased tow
 
 ---
 
-## 12. How Google Cloud is Used
+## 12. Google APIs & Local Data
 
-Moonwalk uses five Google Cloud services across the full stack:
+Moonwalk still calls **Google APIs** for intelligence and voice, but **sessions, vault, screenshots, plans, and milestones are stored on disk** under `MOONWALK_DATA_DIR`.
 
 ### 1. Gemini API — the AI brain
 
@@ -652,63 +646,19 @@ Spoken responses use **Google Neural2** voices via `google-cloud-texttospeech` S
 - Output format: OGG/Opus (plays natively in Chromium without any decoder library)
 - Default voice: `en-US-Neural2-J` (natural, conversational)
 
-### 3. Cloud Run — the cloud brain (production mode)
+### 3. Local persistence & vault recall
 
-In cloud deployment mode, the SPAV agent runs on **Google Cloud Run** (`backend/servers/cloud_server.py`):
-
-```
-Your Mac:                          Google Cloud:
-  mac_client.py  ←WebSocket→  Cloud Run (cloud_server.py)
-  ├── Audio capture                ├── SPAV Agent V2
-  ├── Wake word detection          ├── Gemini API calls
-  ├── Speech-to-text               ├── Firestore reads/writes
-  └── macOS tool execution ←─────── Tool execution requests
-```
-
-The Mac client handles everything that requires macOS APIs. The cloud handles all AI reasoning. This split means:
-- The AI scales independently (Cloud Run scales to 0 when idle)
-- macOS operations stay local and private
-- Multiple users can share one cloud brain
-
-### 4. Firestore — persistent cloud memory
-
-When running in cloud mode, local file-backed memory is replaced with **Firestore** equivalents (`backend/agent/cloud_memory.py`):
-
-| Local storage (dev) | Firestore path (cloud) | What it holds |
-|--------------------|----------------------|---------------|
-| `~/.moonwalk/sessions/*.json` | `users/{uid}/sessions/{sid}` | Conversation history (last 20 turns) |
-| `~/.moonwalk/vault/*.json` | `users/{uid}/vault/{entry_id}` | Permanent vault memories |
-| In-memory dict | `users/{uid}/profile` | Auto-extracted user profile (name, prefs, habits) |
-| In-memory dict | `users/{uid}/tasks/{task_id}` | Background recurring tasks |
-
-Large blobs (screenshots, documents over 1 MB) are automatically offloaded from Firestore to **Google Cloud Storage** at `gs://{bucket}/vault/`.
-
-### 5. Gemini Embeddings + Firestore Vector Search — semantic memory (RAG)
-
-The vault supports **semantic recall** via RAG (`backend/agent/rag.py`):
-
-- Uses `text-embedding-004` model (768-dimensional vectors) via the Gemini API
-- Vault entries are embedded when stored; embeddings are saved alongside them in Firestore
-- Firestore's **native vector index** enables approximate nearest-neighbour search
-- When Moonwalk needs to recall relevant memories, it embeds the query and finds semantically similar vault entries
-- This lets Moonwalk "remember" your preferences, addresses, passwords (encrypted), recurring tasks etc.
+The desktop server keeps durable state in folders such as `sessions/`, `vault/`, `screenshots/`, `plans/`, `milestones/`, and `memories/` (see `backend/runtime_paths.py`). Optional **TF-IDF vault recall** prefixes agent prompts with relevant vault snippets (`backend/servers/local_augment.py`, formatted via `backend/agent/rag.py`). Set `MOONWALK_DISABLE_LOCAL_VAULT_RAG=1` to turn that off.
 
 ### Infrastructure Summary
 
 ```
 Your Mac
   ├── Electron overlay (UI, audio, local tools)
-  └── mac_client.py / local_server.py
-          │  WebSocket (WSS encrypted)
-          ▼
-GCP Cloud Run  (moonwalk-brain)
-  ├── SPAV Agent V2
-  ├── Gemini API ──────────────────────────► Google AI Studio
-  ├── Google Cloud TTS ────────────────────► Neural2 voice synthesis
-  └── Memory layer
-        ├── Firestore ◄──── conversations, vault, profile, tasks
-        └── Cloud Storage ◄── large blobs (>1 MB)
-              └── Firestore vector index ◄── RAG semantic search
+  └── local_server.py (Python WebSocket backend)
+          ├── Gemini API ─────────────────────► Google AI Studio
+          ├── Google Cloud TTS ───────────────► Neural2 voice synthesis
+          └── Disk-backed memory / vault ─────► MOONWALK_DATA_DIR
 ```
 
 ---
@@ -727,10 +677,9 @@ GCP Cloud Run  (moonwalk-brain)
 | Wake word | **Picovoice Porcupine** | On-device, low-power, custom wake word ("Hey Moonwalk"); no audio leaves the Mac for detection |
 | Voice output | **Google Cloud TTS Neural2** | Natural prosody; concurrent sentence synthesis for streaming feel; OGG/Opus output plays natively in Chromium |
 | Browser bridge | **Chrome Extension MV3** | Bridges the real browser the user has open (with all their logged-in state and cookies) rather than a headless browser |
-| Cloud | **Google Cloud Run** | Scales to 0 (no idle cost); 15-minute request timeout for long tasks; WebSocket support |
-| Persistence | **Firestore + GCS** | Serverless; vector search built-in; automatic scaling; same GCP credentials |
-| Semantic search | **Gemini text-embedding-004** | 768 dimensions; high accuracy; same API key as the LLM |
-| Distribution | **electron-builder + GCS** | Universal binary (ARM + Intel); notarization hook; public GCS bucket for download links |
+| Persistence | **Local disk (`MOONWALK_DATA_DIR`)** | Sessions, vault JSON, screenshots, plans/milestones — no hosted database in this tree |
+| Vault recall | **TF-IDF + `rag.format_vault_results_for_prompt`** | Lightweight recall for desktop prompts; optional Gemini embeddings remain available in `rag.py` for advanced use |
+| Distribution | **electron-builder** | Universal binary (ARM + Intel); notarization hook; ship DMG + extension zip from `dist/` |
 
 ### Key Design Decisions
 
@@ -747,8 +696,8 @@ A step plan tells the LLM exactly which tool calls to make. A milestone plan tel
 **Why a separate Chrome extension instead of Electron's browser?**
 Moonwalk is a desktop overlay, not a browser. The Chrome extension bridges the real browser the user already has open, complete with their logged-in sessions, cookies, and browser history. This means web automation works on any site, including banking and internal tools.
 
-**Why split local + cloud modes?**
-macOS-specific APIs (AppleScript, Quartz Accessibility, Picovoice) can only run on a Mac. The AI can run anywhere. The split lets the heavy AI scale independently on Cloud Run (and cost $0 when idle) while keeping all macOS operations local and private. Each user's Mac is its own secure execution environment.
+**Why keep the whole agent on the Mac?**
+macOS-specific APIs (AppleScript, Quartz Accessibility, Picovoice) already require local execution. Running `local_server.py` keeps latency low, avoids shipping a multi-tenant cloud backend, and stores memory entirely under the user’s data directory.
 
 **Memory architecture — four tiers**
 Moonwalk mirrors how humans actually remember things:
@@ -837,106 +786,39 @@ Leave the env vars unset. The build still produces a working unsigned DMG. Custo
 
 ---
 
-## 16. Distributing to Customers via GCS
+## 16. Shipping Release Artifacts
 
-### One-Command Release
+### One-command release (local artifacts)
 
 ```bash
-export GCP_PROJECT="your-project-id"   # Your GCP project
 ./scripts/release.sh
 ```
 
 This pipeline:
 1. **Packages the Chrome extension** → `dist/moonwalk-browser-bridge.zip` (with an `INSTALL.md` guide inside for customers)
-2. **Builds the signed + notarized DMG** → `dist/Moonwalk-1.0.0-universal.dmg`
-3. **Uploads to GCS** → creates versioned files, `latest/` aliases, and a download page
+2. **Builds the signed + notarized DMG** (when signing env vars are set) → `dist/Moonwalk-x.x.x-universal.dmg`
 
-### Step-by-Step (if you need more control)
+Artifacts remain in `dist/`. Host them however you prefer (email, internal drive, your own CDN). This repository does **not** include `upload-gcs.mjs` or a Cloud Run deploy script.
+
+### Step-by-step
 
 ```bash
 # 1. Package extension
 npm run dist:extension
-# → dist/moonwalk-browser-bridge.zip (49 KB)
+# → dist/moonwalk-browser-bridge.zip
 
 # 2. Build DMG
 npm run build:signed
-# → dist/Moonwalk-1.0.0-universal.dmg
-
-# 3. Upload to GCS
-npm run dist:upload
-# → Prints all public URLs
+# → dist/Moonwalk-1.0.0-universal.dmg (version from package.json)
 ```
 
-### What Gets Uploaded
+### Share with customers
 
-| File | Public URL |
-|------|-----------|
-| `Moonwalk-1.0.0-universal.dmg` | `.../releases/v1.0.0/Moonwalk-1.0.0-universal.dmg` |
-| Latest DMG alias | `.../releases/latest/Moonwalk-latest.dmg` |
-| Extension zip | `.../releases/latest/moonwalk-browser-bridge.zip` |
-| Download page | `.../releases/index.html` |
-
-### Share with Customers
-
-Send customers **one URL**:
-```
-https://storage.googleapis.com/<project>-moonwalk-releases/releases/index.html
-```
-
-It's a clean, branded page with big download buttons and brief install instructions — no technical knowledge required.
+Send them the DMG (and optionally the extension zip) directly, or publish both files to your chosen download location.
 
 ---
 
-## 17. Cloud Deployment (GCP Cloud Run)
-
-### One-Command Deploy
-
-```bash
-# Requires: GEMINI_API_KEY set, gcloud CLI authenticated
-GCP_PROJECT="your-project-id" \
-GEMINI_API_KEY="your-gemini-key" \
-bash deploy/deploy_gcp.sh
-```
-
-This script handles everything:
-1. Enables required APIs (Cloud Run, Firestore, Storage, Artifact Registry, Cloud Build)
-2. Creates Firestore database with vector index for RAG
-3. Creates GCS memory bucket with 90-day lifecycle policy
-4. Creates Artifact Registry Docker repository
-5. Builds Docker image with Cloud Build (no local Docker needed)
-6. Deploys `moonwalk-brain` service to Cloud Run
-7. Prints the WebSocket URL + instructions for connecting Mac clients
-
-### After Deployment
-
-Health check:
-```bash
-curl https://moonwalk-brain-xxxx.us-central1.run.app/health
-# → {"status":"ok","agents":0}
-```
-
-Configure a customer's Mac to use the cloud brain (`backend/.env`):
-```bash
-MOONWALK_CLOUD_URL=wss://moonwalk-brain-xxxx.us-central1.run.app
-MOONWALK_CLOUD_TOKEN=your-shared-secret
-```
-
-They then launch `mac_client.py` instead of `local_server.py` — audio and macOS tools stay local, AI reasoning goes to Cloud Run.
-
-### Cloud Run Settings
-
-| Setting | Value | Reason |
-|---------|-------|--------|
-| CPU | 2 | Sufficient for async agent loop |
-| Memory | 1 Gi | Handles concurrent WebSocket sessions |
-| Min instances | 0 | $0 when nobody is using it |
-| Max instances | 3 | Caps cost for multi-user scenarios |
-| Timeout | 900s | Allows long multi-step tasks to complete |
-| Session affinity | On | WebSocket connections stay on the same instance |
-
----
-
-## 18. Running Tests
+## 17. Running Tests
 
 ```bash
 # Full test suite
@@ -962,4 +844,4 @@ python benchmarks/run_benchmarks.py
 
 ---
 
-*Last updated: 16 March 2026*
+*Last updated: 9 May 2026*

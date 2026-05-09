@@ -222,35 +222,5 @@ class RuntimeStateStore:
             return self._request_state.pending_confirmation == "cancelled"
 
 
-# ═══════════════════════════════════════════════════════════════
-#  Per-User Store Registry (for cloud multi-user mode)
-# ═══════════════════════════════════════════════════════════════
-
-_user_stores: dict[str, RuntimeStateStore] = {}
-_registry_lock = threading.Lock()
-
-
-def get_runtime_state(user_id: str = "") -> RuntimeStateStore:
-    """Get or create a RuntimeStateStore for a specific user.
-
-    In local (single-user) mode, pass no user_id to get the global
-    singleton.  In cloud mode, each user_id gets an isolated store
-    so concurrent sessions never collide.
-    """
-    if not user_id:
-        return runtime_state_store
-
-    with _registry_lock:
-        if user_id not in _user_stores:
-            _user_stores[user_id] = RuntimeStateStore()
-        return _user_stores[user_id]
-
-
-def evict_runtime_state(user_id: str) -> bool:
-    """Remove a user's runtime state store (e.g. after disconnect timeout)."""
-    with _registry_lock:
-        return _user_stores.pop(user_id, None) is not None
-
-
-# Default global singleton (backward-compatible for local mode)
+# Global singleton (single-user desktop)
 runtime_state_store = RuntimeStateStore()

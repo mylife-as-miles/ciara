@@ -19,8 +19,7 @@ Demo Video: [https://youtu.be/u3QoaT3pIMs]
 - **SPAV Agent** — Sense → Plan → Act → Verify loop with milestone-based execution
 - **Multi-modal responses** — Cards, tables, rich text, step timelines, image viewer
 - **Browser automation** — Chrome extension bridges web actions (search, fill forms, extract data)
-- **Cloud-ready** — Deploy brain to GCP Cloud Run with Firestore memory + GCS storage
-- **On-device privacy** — Local mode runs everything on your Mac, nothing leaves the machine
+- **Local-first** — Python backend and data stay on your machine under `MOONWALK_DATA_DIR` / `~/.moonwalk`; configure API keys for LLM/TTS providers as needed
 
 ---
 
@@ -112,7 +111,6 @@ Moonwalk/
 ├── main.js                  # Electron main process
 ├── preload.js               # IPC bridge (auth, credentials, mouse)
 ├── package.json             # Electron + electron-builder config
-├── Dockerfile               # Multi-stage cloud build
 ├── setup.sh                 # Post-install Python venv setup
 │
 ├── renderer/
@@ -121,8 +119,8 @@ Moonwalk/
 │   └── renderer.js          # State machine, WS client, audio, modals
 │
 ├── backend/
-│   ├── runtime_state.py     # Per-user state registry
-│   ├── auth.py              # Dual-mode auth (GCP ID + shared secret)
+│   ├── runtime_paths.py     # Local data directory layout
+│   ├── runtime_state.py     # Session / browser runtime snapshot
 │   ├── agent/
 │   │   ├── core_v2.py       # SPAV agent loop
 │   │   ├── planner.py       # LLM task decomposition
@@ -137,8 +135,8 @@ Moonwalk/
 │   │   ├── search.py        # Web search via extension
 │   │   └── selector_ai.py   # AI-powered DOM selector
 │   ├── servers/
-│   │   ├── cloud_server.py  # Cloud Run FastAPI server
-│   │   └── mac_client.py    # Local macOS WebSocket server
+│   │   ├── local_server.py  # WebSocket backend (Electron uses this)
+│   │   └── mac_client.py    # Deprecated shim → local_server
 │   └── tools/               # Tool implementations (click, type, etc.)
 │
 ├── chrome_extension/
@@ -155,31 +153,6 @@ Moonwalk/
 ├── tests/                   # Test suite
 └── benchmarks/              # Quality & intelligence benchmarks
 ```
-
----
-
-## ☁️ Cloud Deployment
-
-Deploy the brain to GCP Cloud Run for multi-user, always-on operation:
-
-```bash
-# Build & push
-docker build --platform linux/amd64 -t $IMAGE .
-docker push $IMAGE
-
-# Deploy
-gcloud run deploy moonwalk-brain \
-  --image $IMAGE \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --port 8080 \
-  --cpu 2 --memory 2Gi \
-  --set-env-vars "GEMINI_API_KEY=<key>,AUTH_SHARED_SECRET=<secret>"
-```
-
-Health check: `GET /health` → `{"status":"ok","agents":0}`
-
-See [docs/GUIDE.md](docs/GUIDE.md) for the full step-by-step deployment guide.
 
 ---
 
@@ -219,7 +192,7 @@ npx electron-builder --mac --universal
 # Output: dist/Moonwalk-1.0.0-universal.dmg
 ```
 
-See [docs/GUIDE.md](docs/GUIDE.md) for icon creation, code signing, notarization, and distribution via GitHub Releases or GCS.
+See [docs/GUIDE.md](docs/GUIDE.md) for icon creation, code signing, notarization, and distribution via GitHub Releases.
 
 ---
 
@@ -231,5 +204,5 @@ MIT
 
 <p align="center">
   <strong>Moonwalk</strong> — Your AI copilot for macOS<br/>
-  <sub>Voice-first · Glass UI · SPAV Agent · Cloud-ready</sub>
+  <sub>Voice-first · Glass UI · SPAV Agent · Local-first</sub>
 </p>

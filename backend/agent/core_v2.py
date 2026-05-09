@@ -1846,6 +1846,19 @@ class MoonwalkAgentV2:
             print(research_summary)
             print(f"[AgentV2] ═══ End Research Summary ═══\n")
 
+        if plan.has_failed():
+            _journal_phase = "failed"
+        elif plan.is_complete():
+            _journal_phase = "completed"
+        else:
+            _journal_phase = "partial"
+        journal_execution_snapshot(
+            plan_dict=plan.to_dict(),
+            user_text=user_text,
+            phase=_journal_phase,
+            label=exec_label,
+        )
+
         return (final_response, False)
 
     def _looks_like_research_doc_task(self, user_text: str, task_summary: str) -> bool:

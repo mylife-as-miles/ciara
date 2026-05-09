@@ -1,22 +1,18 @@
 """
 Moonwalk — RAG Engine (Retrieval-Augmented Generation)
 =======================================================
-Adds semantic memory to the agent using Vertex AI text embeddings
-and Firestore vector search.
+Adds helpers for embeddings (Gemini) and formatting vault recall snippets.
 
-Three retrieval modes:
-  1. **Vault RAG** — Semantic search over the permanent vault
-  2. **Session RAG** — Recall relevant past conversations
-  3. **Contextual RAG** — Augment the current prompt with relevant knowledge
+Desktop mode uses TF-IDF vault recall + ``format_vault_results_for_prompt`` (no DB).
 
 Usage:
   rag = get_rag_engine()
-  
-  # Embed text for storage
+
+  # Embed text (optional / advanced)
   vector = rag.embed("some text")
-  
-  # Augment a prompt with relevant vault knowledge
-  augmented = await rag.augment_prompt("user query", vault_memory)
+
+  # Format pre-retrieved vault entries for the prompt
+  block = format_vault_results_for_prompt("query", vault_entries)
 """
 
 from __future__ import annotations
@@ -41,6 +37,51 @@ EMBEDDING_DIMENSIONS = 768  # text-embedding-004 default
 _EMBED_CACHE_SIZE = 500
 
 
+def format_vault_results_for_prompt(
+    query: str,
+    vault_results: list[dict],
+    max_context_chars: int = 3000,
+) -> str:
+    """
+    Format vault recall hits as injectable context (no embedding API calls).
+    Used by local_server TF-IDF vault recall and by RAGEngine.augment_prompt.
+    """
+    if not vault_results:
+        return ""
+
+    lines = [
+        "[Relevant Knowledge — retrieved from your permanent memory vault]",
+    ]
+    total_chars = 0
+
+    for entry in vault_results:
+        title = entry.get("title", "")
+        content = entry.get("content", "")
+        category = entry.get("category", "")
+        tags = ", ".join(entry.get("tags", []))
+
+        block = f"\n  [{category}] {title}"
+        if tags:
+            block += f"  (tags: {tags})"
+        if content:
+            remaining = max_context_chars - total_chars - len(block) - 50
+            if remaining < 100:
+                break
+            block += f"\n  {content[:remaining]}"
+
+        lines.append(block)
+        total_chars += len(block)
+
+        if total_chars >= max_context_chars:
+            break
+
+    if len(lines) == 1:
+        return ""
+
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ═══════════════════════════════════════════════════════════════
 #  RAG Engine
 # ═══════════════════════════════════════════════════════════════
@@ -49,8 +90,7 @@ class RAGEngine:
     """
     Retrieval-Augmented Generation engine for Moonwalk.
     
-    Uses Gemini's text-embedding-004 model for embeddings and
-    Firestore vector search for retrieval.
+    Uses Gemini's text-embedding-004 model for embeddings when needed.
     """
 
     def __init__(self):
@@ -129,52 +169,7 @@ class RAGEngine:
         vault_results: list[dict],
         max_context_chars: int = 3000,
     ) -> str:
-        """
-        Build a RAG context block from retrieved vault entries.
-        
-        Args:
-            query: The user's query
-            vault_results: Pre-retrieved vault entries (from CloudVaultMemory.recall)
-            max_context_chars: Maximum characters for the RAG context
-            
-        Returns:
-            A formatted string to inject into the system prompt
-        """
-        if not vault_results:
-            return ""
-
-        lines = [
-            "[Relevant Knowledge — retrieved from your permanent memory vault]",
-        ]
-        total_chars = 0
-
-        for entry in vault_results:
-            title = entry.get("title", "")
-            content = entry.get("content", "")
-            category = entry.get("category", "")
-            tags = ", ".join(entry.get("tags", []))
-
-            # Build entry block
-            block = f"\n  [{category}] {title}"
-            if tags:
-                block += f"  (tags: {tags})"
-            if content:
-                remaining = max_context_chars - total_chars - len(block) - 50
-                if remaining < 100:
-                    break
-                block += f"\n  {content[:remaining]}"
-
-            lines.append(block)
-            total_chars += len(block)
-
-            if total_chars >= max_context_chars:
-                break
-
-        if len(lines) == 1:
-            return ""
-
-        lines.append("")
-        return "\n".join(lines)
+        return format_vault_results_for_prompt(query, vault_results, max_context_chars)
 
     def build_session_context(
         self,

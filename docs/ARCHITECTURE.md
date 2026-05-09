@@ -342,11 +342,11 @@ No visual indicator beyond the standard blue listening glow (existing `variant-l
 
 ## 10. Memory
 
-**Files:** `backend/agent/memory.py`, `backend/agent/cloud_memory.py`, `backend/agent/rag.py`
+**Files:** `backend/agent/memory.py`, `backend/agent/rag.py`, `backend/runtime_paths.py`, `backend/servers/local_augment.py`
 
 - **Working memory** — per-request context built during milestone execution (tool results, observations, intermediate facts)
-- **Cloud memory** (`cloud_memory.py`) — cross-session persistent memory stored in GCS / Firestore
-- **RAG** (`rag.py`) — retrieval-augmented generation over stored memory and user documents
+- **Local persistence** — JSON sessions, vault documents, screenshots, plans/milestones/memories under `MOONWALK_DATA_DIR` (see `runtime_paths.py`)
+- **RAG** (`rag.py`) — retrieval utilities over stored documents; the desktop server optionally prefixes prompts with TF-IDF vault recall (`local_augment.py`)
 - Memory is updated by the verifier after successful milestone completion
 
 ---
@@ -386,6 +386,7 @@ backend/
   servers/
     local_server.py         WebSocket entrypoint, session management,
                             TTS streaming, cancel, conversation mode
+    local_augment.py        Optional vault TF-IDF prefix for agent prompts
   agent/
     core_v2.py              MoonwalkAgentV2 — SPAV loop, ack, fast path,
                             personality, conversation mode markers
@@ -395,7 +396,6 @@ backend/
     verifier.py             Evidence gate / per-tool verification
     world_state.py          WorldState, UserIntent, IntentParser
     memory.py               Working memory
-    cloud_memory.py         Cross-session cloud memory
     rag.py                  Retrieval-augmented generation
     browser_intent_utils.py Browser reasoning helpers
     template_registry.py    Advisory skill overlays (JSON packs)
@@ -413,6 +413,7 @@ backend/
   providers/
     (LLM provider adapters)
   runtime_state.py          Shared cancel flag (RuntimeStateStore)
+  runtime_paths.py          MOONWALK_DATA_DIR layout (sessions, vault, …)
 
 renderer/
   index.html                Glass pill HTML — stop button, response card

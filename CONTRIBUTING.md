@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-Moonwalk is a **voice-activated AI assistant** that runs as a macOS overlay (Electron) with a Python backend powered by Google's Gemini LLM. The LLM can control the user's Mac (open apps, click UI, type text) and also spawn autonomous background "sub-agents" that run headlessly on the cloud.
+Moonwalk is a **voice-activated AI assistant** that runs as a macOS overlay (Electron) with a Python backend powered by Google's Gemini LLM. The LLM controls the user's Mac (open apps, click UI, type text) and can automate the browser via the Chrome extension bridge.
 
 ### Architecture Diagram
 
@@ -27,15 +27,12 @@ Moonwalk is a **voice-activated AI assistant** that runs as a macOS overlay (Ele
       ┌──────────────────▼──────────────────┐
       │     Python Backend (backend/)       │
       │                                     │
-      │  backend_server.py  (local entry)   │
-      │  cloud_server.py    (cloud entry)   │
-      │  agent.py           (LLM loop)      │
-      │  model_router.py    (tier routing)  │
-      │  providers.py       (Gemini API)    │
-      │  memory.py          (conversation)  │
-      │  perception.py      (Mac context)   │
-      │  tools.py           (33+ tools)     │
-      └────────────────────────────────────┘
+      │  servers/local_server.py (main WS)  │
+      │  agent/core_v2.py    (SPAV loop)    │
+      │  providers/router.py (Gemini)       │
+      │  agent/memory.py     (disk-backed)   │
+      │  tools/registry.py   (tools)        │
+      └─────────────────────────────────────┘
 ```
 
 ---
@@ -47,7 +44,6 @@ Moonwalk/
 ├── main.js                 # Electron main process (window mgmt, IPC, hotkeys)
 ├── preload.js              # Electron context bridge (IPC API for renderer)
 ├── package.json            # Electron dependencies (electron, ws)
-├── Dockerfile              # Cloud Run deployment (backend only)
 │
 ├── renderer/               # ── FRONTEND (Electron Renderer) ──
 │   ├── index.html          #   Main overlay UI (pill, bubble, drawer)
@@ -59,16 +55,11 @@ Moonwalk/
 │
 ├── backend/                # ── BACKEND (Python) ──
 │   ├── .env                #   API keys & model config
-│   ├── backend_server.py   #   Local entry point (voice + WS server)
-│   ├── cloud_server.py     #   Cloud entry point (GCP Cloud Run)
-│   ├── agent.py            #   Core LLM agent loop
-│   ├── model_router.py     #   Tier routing (fast vs powerful model)
-│   ├── providers.py        #   Gemini API wrapper (streaming)
-│   ├── memory.py           #   Conversation memory + context compression
-│   ├── perception.py       #   macOS context snapshot (active app, URL)
-│   ├── tools.py            #   All 33+ tool definitions
-│   ├── hey_moonwalk.ppn    #   Wake word model (Picovoice)
-│   └── requirements-cloud.txt  # Python deps for GCP deployment
+│   ├── servers/
+│   │   └── local_server.py #   WebSocket + voice + agent (primary entry)
+│   ├── agent/              #   SPAV agent, memory, perception, planner
+│   ├── tools/              #   Tool implementations (registry)
+│   └── requirements.txt    #   Python dependencies
 │
 ├── tests/                  # Test scripts (not production)
 └── experiments/            # Generated prototypes (CRM, etc.)
@@ -85,7 +76,7 @@ Moonwalk/
 | **Electron Shell** | Frontend Dev | `main.js`, `preload.js`, `package.json` |
 | **LLM Brain** | Backend Dev | `backend/agent.py`, `backend/providers.py`, `backend/model_router.py`, `backend/memory.py` |
 | **Tool Registry** | Backend Dev | `backend/tools.py` |
-| **Server & Orchestrator** | Backend Dev | `backend/backend_server.py`, `backend/cloud_server.py` |
+| **Server & Orchestrator** | Backend Dev | `backend/servers/local_server.py` |
 | **Perception** | Backend Dev | `backend/perception.py` |
 | **Shared Contract** | Both | This file (`CONTRIBUTING.md`) — the WebSocket protocol below |
 
@@ -95,7 +86,7 @@ Moonwalk/
 
 ## 4. The WebSocket Protocol (API Contract)
 
-The frontend and backend communicate exclusively via a single **WebSocket** connection on `ws://127.0.0.1:8000` (local) or `ws://CLOUD_IP:8080` (cloud).
+The frontend and backend communicate exclusively via a single **WebSocket** connection on `ws://127.0.0.1:8000`.
 
 All messages are JSON. Every message has a `"type"` field.
 
@@ -177,7 +168,7 @@ Every background agent follows this state lifecycle:
   └────────┘               └──────────┘
 ```
 
-**Backend enum values** (in `cloud_server.py`):
+**Backend enum values** (dashboard / agent lifecycle — see renderer code for source of truth):
 - `running`, `waiting_on_child`, `paused_for_review`, `completed`, `error`, `stopped`, `stopping`
 
 ---
@@ -210,7 +201,7 @@ When the dashboard receives a full sync (`dashboard_state`), each agent object h
 
 Tools are Python async functions registered in `backend/tools.py`. The LLM picks which tool to call.
 
-### Cloud-Safe Tools (run on GCP, no Mac needed)
+### Tools that do not require native macOS GUI (examples)
 | Tool | Description |
 |------|-------------|
 | `send_response` | Send final answer text to the user |
@@ -282,16 +273,12 @@ npm start          # Starts Electron + auto-launches Python backend
 ```bash
 cd Moonwalk
 source venv/bin/activate
-python backend/backend_server.py     # Starts WS server on :8000
+python backend/servers/local_server.py     # Starts WS server on :8000
 ```
 
-### Cloud Deployment (GCP)
-```bash
-docker build -t moonwalk-brain .
-docker run -p 8080:8080 -e GEMINI_API_KEY=<key> moonwalk-brain
-```
+### Packaging
 
-> **Note:** The `Dockerfile` currently copies files from the root. It needs updating to copy from `backend/` after the recent folder restructure.
+There is **no** supported GCP Cloud Run or Docker deploy path in this tree anymore; run via Electron or `local_server.py` only.
 
 ---
 
@@ -332,8 +319,7 @@ async def my_new_tool(param1: str = "") -> str:
     # Your implementation
     return "Result string"
 ```
-3. If the tool is cloud-safe, add it to `CLOUD_TOOLS` in `cloud_server.py`.
-4. The frontend does NOT need to change — tool results flow through the existing WebSocket protocol.
+3. Register the tool and ensure tests cover critical paths.
 
 ---
 
@@ -351,19 +337,7 @@ async def my_new_tool(param1: str = "") -> str:
 
 ---
 
-## 13. Updating the Dockerfile
+## 13. Packaging
 
-After the folder restructure, the `Dockerfile` needs to be updated. The `COPY` commands should reference `backend/`:
+Distribution builds use Electron (`electron-builder`). There is no Docker/GCP backend image maintained in this repository.
 
-```dockerfile
-COPY backend/requirements-cloud.txt .
-RUN pip install --no-cache-dir -r requirements-cloud.txt
-
-COPY backend/cloud_server.py .
-COPY backend/agent.py .
-COPY backend/providers.py .
-COPY backend/model_router.py .
-COPY backend/memory.py .
-COPY backend/tools.py .
-COPY backend/.env .
-```

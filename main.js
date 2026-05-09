@@ -172,6 +172,14 @@ async function startPythonBackend() {
   // Use saved Picovoice key if set, otherwise fall back to the bundled default
   spawnEnv.PICOVOICE_ACCESS_KEY = savedCreds?.picovoice_key || BUNDLED_PICOVOICE_KEY;
 
+  const moonwalkDataDir = path.join(app.getPath("userData"), "moonwalk-data");
+  try {
+    fs.mkdirSync(moonwalkDataDir, { recursive: true });
+  } catch (err) {
+    console.error("[Backend] Could not create Moonwalk data dir:", moonwalkDataDir, err);
+  }
+  spawnEnv.MOONWALK_DATA_DIR = moonwalkDataDir;
+
   // Start the python process
   pythonProcess = spawn(venvPythonPath, [scriptPath], {
     cwd: cwd,

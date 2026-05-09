@@ -33,6 +33,11 @@ if _backend_dir not in sys.path:
 
 load_dotenv(os.path.join(_backend_dir, ".env"))
 
+from runtime_paths import ensure_moonwalk_data_layout
+
+_data_root = ensure_moonwalk_data_layout()
+print(f"[Local] Moonwalk local data directory: {_data_root}")
+
 # Voice libraries (soft import — server still starts if missing, wake word is just disabled)
 try:
     import pvporcupine
@@ -49,6 +54,7 @@ from voice.tts import get_tts_engine, prepare_for_speech
 from servers.browser_bridge_server import BRIDGE_HOST, BRIDGE_PORT, bridge_handler
 from browser import BrowserResolver, browser_bridge, browser_store, ActionRequest
 from browser.selector_ai import build_ranked_candidates, select_browser_candidate_with_flash
+from servers.local_augment import build_agent_user_message_with_vault
 
 # Agent version toggle (deprecated compatibility env; V2 is always used)
 AGENT_VERSION = os.environ.get("MOONWALK_AGENT_VERSION", "v2")
@@ -146,10 +152,13 @@ class VoiceAssistant:
 
         context = await perception.snapshot(text)
 
+        # Vault RAG (TF-IDF over local vault files)
+        user_message = build_agent_user_message_with_vault(self.agent, text)
+
         # Pass conversation-mode flag so the agent can tailor responses
         self.agent._conversation_mode = self.conversation_mode
 
-        result = await self.agent.run(text, context, ws_callback=ws_callback)
+        result = await self.agent.run(user_message, context, ws_callback=ws_callback)
 
         if isinstance(result, tuple):
             response_text, awaiting_reply = result
