@@ -1446,7 +1446,7 @@ async def _fast_visual_locate(
         )
 
         response = client.models.generate_content(
-            model=os.environ.get("GEMINI_FAST_MODEL", "gemini-3-flash-preview"),
+            model=os.environ.get("GEMINI_FAST_MODEL", "gemma-4-26b-a4b-it"),
             contents=[
                 _gtypes.Content(
                     role="user",
@@ -1644,7 +1644,7 @@ async def read_screen(question: str = "") -> str:
         )
         
         response = client.models.generate_content(
-            model=os.environ.get("GEMINI_POWERFUL_MODEL", "gemini-3.1-pro-preview-customtools"),
+            model=os.environ.get("GEMINI_POWERFUL_MODEL", "gemma-4-31b-it"),
             contents=[
                 types.Content(
                     role="user",

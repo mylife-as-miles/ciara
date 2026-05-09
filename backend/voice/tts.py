@@ -20,10 +20,23 @@ import json
 import re
 import os
 from dataclasses import dataclass
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Union
 from functools import partial
 
+import httpx
+
 print = partial(print, flush=True)
+
+
+def tts_backend() -> str:
+    """Prefer ElevenLabs when configured unless MOONWALK_TTS_PROVIDER forces Google."""
+    explicit = os.environ.get("MOONWALK_TTS_PROVIDER", "").strip().lower()
+    if explicit in ("google", "elevenlabs"):
+        return explicit
+    if os.environ.get("ELEVENLABS_API_KEY", "").strip():
+        return "elevenlabs"
+    return "google"
+
 
 # ═══════════════════════════════════════════════════════════════
 #  Configuration
@@ -319,16 +332,131 @@ class TTSEngine:
         return await self._synthesize_one(ack_text)
 
 
+class ElevenLabsTTSEngine:
+    """Text-to-speech via ElevenLabs HTTP API (MP3 chunks)."""
+
+    def __init__(self):
+        self.api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+        self.voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM").strip()
+        self.model_id = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3").strip()
+        self._enabled = bool(self.api_key and self.voice_id)
+        timeout_s = os.environ.get("MOONWALK_TTS_TIMEOUT", "120")
+        self._timeout = float(timeout_s or 120)
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        self._enabled = value
+
+    async def _synthesize_one(self, text: str) -> Optional[bytes]:
+        if not self._enabled or not text:
+            return None
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}"
+        params = {"output_format": "mp3_44100_128"}
+        headers = {
+            "xi-api-key": self.api_key,
+            "accept": "audio/mpeg",
+            "Content-Type": "application/json",
+        }
+        body = {"text": text, "model_id": self.model_id}
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                r = await client.post(url, params=params, json=body, headers=headers)
+                r.raise_for_status()
+                return r.content
+        except Exception as e:
+            print(f"[TTS ElevenLabs] ⚠ Synthesis error: {e}")
+            return None
+
+    async def synthesize(self, text: str) -> Optional[bytes]:
+        if not self._enabled or not text:
+            return None
+        cleaned = prepare_for_speech(text)
+        if not cleaned:
+            return None
+        return await self._synthesize_one(cleaned)
+
+    async def stream_synthesize(
+        self,
+        text: str,
+        display_type: str = "text",
+    ) -> AsyncIterator[TTSChunk]:
+        if not self._enabled:
+            return
+
+        cleaned = prepare_for_speech(text, display_type)
+        if not cleaned:
+            return
+
+        sentences = split_sentences(cleaned)
+        if not sentences:
+            return
+
+        print(
+            f"[TTS ElevenLabs] 🔊 Streaming {len(sentences)} sentence(s), "
+            f"{len(cleaned)} chars, voice={self.voice_id}, model={self.model_id}",
+        )
+
+        sem = asyncio.Semaphore(MAX_CONCURRENT_SYNTH)
+
+        async def _synth_with_limit(s: str) -> Optional[bytes]:
+            async with sem:
+                return await self._synthesize_one(s)
+
+        tasks = [asyncio.create_task(_synth_with_limit(s)) for s in sentences]
+
+        for seq, (task, sentence_text) in enumerate(zip(tasks, sentences)):
+            try:
+                audio = await task
+                if audio:
+                    yield TTSChunk(
+                        audio=audio,
+                        seq=seq,
+                        final=(seq == len(sentences) - 1),
+                        text=sentence_text,
+                    )
+            except asyncio.CancelledError:
+                for remaining_task in tasks[seq + 1:]:
+                    remaining_task.cancel()
+                return
+            except Exception as e:
+                print(f"[TTS ElevenLabs] ⚠ Sentence {seq} failed: {e}")
+                continue
+
+        print("[TTS ElevenLabs] ✓ Stream complete")
+
+    async def speak_ack(self, ack_text: str) -> Optional[bytes]:
+        if not self._enabled or not ack_text:
+            return None
+        return await self._synthesize_one(ack_text)
+
+
 # ═══════════════════════════════════════════════════════════════
 #  Singleton
 # ═══════════════════════════════════════════════════════════════
 
-_tts_engine: Optional[TTSEngine] = None
+_tts_engine: Optional[Union[TTSEngine, ElevenLabsTTSEngine]] = None
 
 
-def get_tts_engine() -> TTSEngine:
-    """Get or create the singleton TTS engine."""
+def get_tts_engine() -> Union[TTSEngine, ElevenLabsTTSEngine]:
+    """Google Cloud or ElevenLabs TTS singleton based on MOONWALK_TTS_PROVIDER / keys."""
     global _tts_engine
     if _tts_engine is None:
-        _tts_engine = TTSEngine()
+        use_el = tts_backend() == "elevenlabs"
+        if use_el:
+            el = ElevenLabsTTSEngine()
+            if el.enabled:
+                _tts_engine = el
+                print("[TTS] ✓ ElevenLabs TTS engine selected")
+            else:
+                print(
+                    "[TTS] ⚠ ElevenLabs selected but missing ELEVENLABS_API_KEY or "
+                    "ELEVENLABS_VOICE_ID — falling back to Google Cloud TTS",
+                )
+                _tts_engine = TTSEngine()
+        else:
+            _tts_engine = TTSEngine()
     return _tts_engine

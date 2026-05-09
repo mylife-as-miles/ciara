@@ -35,9 +35,10 @@ class RouteDecision:
 #  Model Config
 # ═══════════════════════════════════════════════════════════════
 
-FAST_MODEL = "gemini-3-flash-preview"
-POWERFUL_MODEL = "gemini-3.1-pro-preview-customtools"
-ROUTING_MODEL = "gemini-2.5-flash"
+# Gemma 4 via Google AI — exact IDs may evolve; override with GEMINI_*_MODEL env vars.
+FAST_MODEL = "gemma-4-26b-a4b-it"
+POWERFUL_MODEL = "gemma-4-31b-it"
+ROUTING_MODEL = "gemma-4-26b-a4b-it"
 
 # The routing prompt that Flash uses to classify requests
 ROUTING_PROMPT = """You are a routing classifier for a desktop AI assistant called Moonwalk.
@@ -179,7 +180,7 @@ class ModelRouter:
                 self._powerful = None
 
             # Fallback model (for when primary models fail)
-            fallback_name = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-pro")
+            fallback_name = os.environ.get("GEMINI_FALLBACK_MODEL", POWERFUL_MODEL)
             self._fallback = get_provider(fallback_name)
             if self._fallback and await self._fallback.is_available():
                 print(f"[Router] ✓ FALLBACK (emergency): {fallback_name}")

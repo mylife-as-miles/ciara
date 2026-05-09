@@ -92,7 +92,7 @@ class GeminiProvider(LLMProvider):
                     "tools": tool_decls if tool_decls else None,
                     "temperature": temperature,
                 }
-                if "pro" in self._model or "thinking" in self._model:
+                if ("pro" in self._model or "thinking" in self._model) and "gemma" not in self._model.lower():
                     config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=1024)
 
                 response = await asyncio.wait_for(
@@ -202,7 +202,7 @@ class GeminiProvider(LLMProvider):
             "tools": tool_decls if tool_decls else None,
             "temperature": temperature,
         }
-        if "pro" in self._model or "thinking" in self._model:
+        if ("pro" in self._model or "thinking" in self._model) and "gemma" not in self._model.lower():
             config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=1024)
 
         try:

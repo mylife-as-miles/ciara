@@ -51,6 +51,7 @@ from agent import create_agent
 import agent.perception as perception
 from runtime_state import runtime_state_store
 from voice.tts import get_tts_engine, prepare_for_speech
+from voice.transcription import transcribe_wav_bytes
 from servers.browser_bridge_server import BRIDGE_HOST, BRIDGE_PORT, bridge_handler
 from browser import BrowserResolver, browser_bridge, browser_store, ActionRequest
 from browser.selector_ai import build_ranked_candidates, select_browser_candidate_with_flash
@@ -403,12 +404,8 @@ class VoiceAssistant:
                 w.writeframes(self.audio_buffer)
             wav_io.seek(0)
 
-            # Recognize using Google Web Speech API
-            with sr.AudioFile(wav_io) as source:
-                audio_data = self.recognizer.record(source)
-                
             try:
-                text = self.recognizer.recognize_google(audio_data)
+                text = await transcribe_wav_bytes(wav_io.getvalue(), self.recognizer)
                 print(f"=> TRANSCRIBED: {text}")
                 
                 # ════════════════════════════════════════════
@@ -445,7 +442,7 @@ class VoiceAssistant:
                     return
                 
             except sr.UnknownValueError:
-                print("Google STT could not understand audio")
+                print("Speech-to-text could not understand audio")
                 # If we were in an await_reply loop or conversation mode, keep listening
                 if getattr(self, "waiting_for_reply", False) or self.conversation_mode:
                     print("[Backend] Keeping microphone open (conversation mode or await reply)...")
@@ -465,7 +462,7 @@ class VoiceAssistant:
                 }))
                 
             except sr.RequestError as e:
-                print(f"Could not request results from Google; {e}")
+                print(f"Speech-to-text network error: {e}")
                 if self.conversation_mode:
                     print("[Backend] Network error but conversation mode on — keeping mic open")
                     self.state = "LISTENING"

@@ -90,7 +90,7 @@ def _extract_json(text: str) -> Dict[str, Any]:
 
 async def _generate_with_flash(*, system_prompt: str, user_payload: Dict[str, Any]) -> Dict[str, Any]:
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    model_name = os.environ.get("GEMINI_FAST_MODEL", "gemini-3-flash-preview").strip() or "gemini-3-flash-preview"
+    model_name = os.environ.get("GEMINI_FAST_MODEL", "gemma-4-26b-a4b-it").strip() or "gemma-4-26b-a4b-it"
 
     if not api_key:
         raise BrowserInterpretationError(
