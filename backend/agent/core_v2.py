@@ -36,6 +36,7 @@ from agent.planner import MilestonePlan, Milestone, MilestoneStatus
 from agent.task_planner import TaskPlanner
 from agent.verifier import get_verifier
 from agent.memory import ConversationMemory, UserPreferences, TaskStore, UserProfile, WorkingMemory, VaultMemory
+from agent.workspace_prompts import format_for_system_prompt, load_workspace_prompt_bundle
 from tools.selector import get_tool_selector, set_tool_gateway_context, set_web_progress_callback
 from tools import registry as tool_registry
 from providers.router import ModelRouter
@@ -233,6 +234,9 @@ class MoonwalkAgentV2:
     def _build_system_prompt(self) -> str:
         """Build the system prompt with user preferences, profile, and working memory."""
         prompt = SYSTEM_PROMPT_V2
+        ws = format_for_system_prompt(load_workspace_prompt_bundle())
+        if ws:
+            prompt += ws
         prefs = self.preferences.to_prompt_string()
         if prefs:
             prompt += f"\n\n{prefs}"
