@@ -1,7 +1,7 @@
 {
   "name": "ciara",
   "version": "1.0.0",
-  "description": "CIARA — AI Desktop Assistant",
+  "description": "CIARA — Control Intelligence Assistant for Real-time Automation",
   "author": "CIARA",
   "main": "main.js",
   "scripts": {

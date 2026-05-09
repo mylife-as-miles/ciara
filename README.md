@@ -1,6 +1,6 @@
 # CIARA
 
-**AI desktop assistant for macOS** — a transparent glass-pill overlay that uses voice and text to control your Mac.
+**Control Intelligence Assistant for Real-time Automation** — an AI desktop companion for macOS: a transparent glass-pill overlay that uses voice and text to control your Mac.
 
 Built with Electron + Python. Thinks with LLMs. Acts through Accessibility APIs and AppleScript.
 

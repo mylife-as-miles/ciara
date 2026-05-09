@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CIARA Browser Bridge",
   "version": "1.0.0",
-  "description": "Stable DOM bridge for CIARA browser automation.",
+  "description": "Control Intelligence Assistant for Real-time Automation — DOM bridge for CIARA browser automation.",
   "permissions": [
     "tabs",
     "activeTab",
