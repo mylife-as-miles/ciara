@@ -65,7 +65,7 @@
 
   <!-- Title bar -->
   <text x="550" y="48" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f" letter-spacing="-0.02em">Moonwalk · System Overview</text>
-  <text x="550" y="72" text-anchor="middle" font-size="13" fill="#6e6e73">End-to-end architecture from user input to task execution</text>
+  <text x="550" y="72" text-anchor="middle" font-size="13" fill="#6e6e73">Local-first stack from user input to task execution</text>
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- ROW 1: User + Electron Shell                -->
