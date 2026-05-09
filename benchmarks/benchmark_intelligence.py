@@ -1,5 +1,5 @@
 """
-Moonwalk — General Intelligence Benchmark
+CIARA — General Intelligence Benchmark
 ==========================================
 Tests cognitive reasoning: logic, ambiguity handling, math,
 creativity, world knowledge, and adversarial robustness.
@@ -21,9 +21,9 @@ from datetime import datetime
 # Add backend to path
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
 
-from agent import MoonwalkAgent
+from agent import CiaraAgentV2
 from tools import registry as tool_registry
-import perception
+import agent.perception as perception
 
 # ═══════════════════════════════════════════════════════════════
 #  Constants
@@ -325,7 +325,7 @@ class IntelligenceBenchmark:
         return suite_result
 
     async def _run_single(self, scenario: dict, result: ScenarioResult):
-        agent = MoonwalkAgent()
+        agent = CiaraAgentV2()
         if self._shared_router:
             agent.router = self._shared_router
 

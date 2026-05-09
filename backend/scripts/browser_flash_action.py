@@ -1,4 +1,4 @@
-"""Trigger a Gemini 3 Flash-driven browser extension action through the local Moonwalk server."""
+"""Trigger a Gemini 3 Flash-driven browser extension action through the local CIARA server."""
 
 import argparse
 import asyncio

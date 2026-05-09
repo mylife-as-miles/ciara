@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-//  Moonwalk — electron-builder afterSign hook
+//  CIARA — electron-builder afterSign hook
 //  Notarizes the macOS .app with Apple's notary service.
 //
 //  Required environment variables:

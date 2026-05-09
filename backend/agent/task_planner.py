@@ -1,5 +1,5 @@
 """
-Moonwalk — Task Planner V2
+CIARA — Task Planner V2
 ===========================
 Milestone-first task planner for the unified execution loop.
 """
@@ -26,7 +26,7 @@ def _norm_text(text: str) -> str:
 #  Milestone Planning Prompt (V3)
 # ═══════════════════════════════════════════════════════════════
 
-MILESTONE_PLANNING_SYSTEM = """You are the milestone planner for Moonwalk, a macOS desktop AI assistant.
+MILESTONE_PLANNING_SYSTEM = """You are the milestone planner for CIARA, a macOS desktop AI assistant.
 Your job: convert user requests into MILESTONE plans — high-level goal checkpoints.
 Output ONLY valid JSON — no explanations, no markdown.
 

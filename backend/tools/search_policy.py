@@ -1,5 +1,5 @@
 """
-Moonwalk — Deterministic search result ranking and following.
+CIARA — Deterministic search result ranking and following.
 """
 
 from __future__ import annotations

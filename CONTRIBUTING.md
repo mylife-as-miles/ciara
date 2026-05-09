@@ -1,4 +1,4 @@
-# Moonwalk — Developer Sync Guide
+# CIARA — Developer Sync Guide
 
 > **Last updated:** 2026-03-03
 > **Purpose:** This document is the single source of truth for anyone working on this project. If you are using AI tools to build, paste this entire file into context.
@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-Moonwalk is a **voice-activated AI assistant** that runs as a macOS overlay (Electron) with a Python backend powered by Google's Gemini LLM. The LLM controls the user's Mac (open apps, click UI, type text) and can automate the browser via the Chrome extension bridge.
+CIARA is a **voice-activated AI assistant** that runs as a macOS overlay (Electron) with a Python backend powered by Google's Gemini LLM. The LLM controls the user's Mac (open apps, click UI, type text) and can automate the browser via the Chrome extension bridge.
 
 ### Architecture Diagram
 
@@ -40,7 +40,7 @@ Moonwalk is a **voice-activated AI assistant** that runs as a macOS overlay (Ele
 ## 2. Folder Structure
 
 ```
-Moonwalk/
+CIARA/
 ├── main.js                 # Electron main process (window mgmt, IPC, hotkeys)
 ├── preload.js              # Electron context bridge (IPC API for renderer)
 ├── package.json            # Electron dependencies (electron, ws)
@@ -264,14 +264,14 @@ GEMINI_ROUTING_MODEL=gemini-2.5-flash            # Tier 0 (query classifier)
 
 ### Frontend (Electron)
 ```bash
-cd Moonwalk
+cd CIARA
 npm install
 npm start          # Starts Electron + auto-launches Python backend
 ```
 
 ### Backend Only (for isolated backend dev)
 ```bash
-cd Moonwalk
+cd CIARA
 source venv/bin/activate
 python backend/servers/local_server.py     # Starts WS server on :8000
 ```

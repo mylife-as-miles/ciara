@@ -1,5 +1,5 @@
 """
-Moonwalk — Agent Core V2
+CIARA — Agent Core V2
 =========================
 Sense-Plan-Act-Verify (SPAV) architecture for improved tool calling.
 
@@ -29,7 +29,7 @@ print = partial(print, flush=True)
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
 
-# Moonwalk V2 modules
+# CIARA V2 modules
 from agent.world_state import WorldState, UserIntent, IntentParser, EntityExtractor, IntentAction
 from agent.planner import ExecutionStep, StepStatus
 from agent.planner import MilestonePlan, Milestone, MilestoneStatus
@@ -97,7 +97,7 @@ WEB_FLOW_TOOLS = {
 }
 
 # Simplified system prompt for V2 (planning is done separately)
-SYSTEM_PROMPT_V2 = """You are Moonwalk, a macOS desktop assistant.
+SYSTEM_PROMPT_V2 = """You are CIARA, a macOS desktop assistant.
 
 ## Personality & Tone
 - Warm, helpful, and efficient — like a capable friend, not a corporate bot.
@@ -185,7 +185,7 @@ class PendingExecutionState:
 #  Agent V2 Class
 # ═══════════════════════════════════════════════════════════════
 
-class MoonwalkAgentV2:
+class CiaraAgentV2:
     """
     V2 Agent with Sense-Plan-Act-Verify architecture.
     
@@ -423,14 +423,14 @@ class MoonwalkAgentV2:
             parts = turn.get("parts", [])
             text = " ".join(p.get("text", "") for p in parts if isinstance(p, dict))
             if text:
-                history_text += f"{'User' if role == 'user' else 'Moonwalk'}: {text}\n"
+                history_text += f"{'User' if role == 'user' else 'CIARA'}: {text}\n"
 
         profile_hint = ""
         if user_name:
             profile_hint = f"The user's name is {user_name}. Use it naturally (not every time).\n"
 
         system = (
-            "You are Moonwalk, a friendly macOS desktop assistant. "
+            "You are CIARA, a friendly macOS desktop assistant. "
             "Keep responses short (1-2 sentences max), natural, and warm. "
             "Sound like a helpful friend, not a corporate bot. "
             "You're voice-first — write responses that sound natural when spoken aloud. "
@@ -619,9 +619,9 @@ class MoonwalkAgentV2:
         plan_tools = self._planned_tool_names(pending.plan)
         is_web_flow_plan = bool(plan_tools.intersection(WEB_FLOW_TOOLS))
         if old_app and new_app and old_app != new_app:
-            # Approval can be spoken/typed via Moonwalk's Electron panel while the
+            # Approval can be spoken/typed via CIARA's Electron panel while the
             # original browser task context is still valid. Don't invalidate for that.
-            if is_web_flow_plan and old_app in BROWSER_APP_NAMES and new_app in {"electron", "moonwalk"}:
+            if is_web_flow_plan and old_app in BROWSER_APP_NAMES and new_app in {"electron", "ciara"}:
                 pass
             elif is_web_flow_plan and old_app in BROWSER_APP_NAMES and new_app in BROWSER_APP_NAMES:
                 pass
@@ -2642,7 +2642,7 @@ class MoonwalkAgentV2:
 
 def create_agent(version: str = "v2", use_planning: bool = True, persist: bool = True):
     """
-    Create the active Moonwalk agent runtime.
+    Create the active CIARA agent runtime.
     
     Args:
         version: Deprecated compatibility argument. V2 is always used.
@@ -2651,8 +2651,8 @@ def create_agent(version: str = "v2", use_planning: bool = True, persist: bool =
                 Set False for benchmarks / tests.
         
     Returns:
-        MoonwalkAgentV2 instance
+        CiaraAgentV2 instance
     """
     if str(version or "v2").lower() != "v2":
         print(f"[AgentV2] Ignoring deprecated agent version '{version}' and using V2.")
-    return MoonwalkAgentV2(use_planning=use_planning, persist=persist)
+    return CiaraAgentV2(use_planning=use_planning, persist=persist)

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Moonwalk Browser Bridge",
+  "name": "CIARA Browser Bridge",
   "version": "1.0.0",
-  "description": "Stable DOM bridge for Moonwalk browser automation.",
+  "description": "Stable DOM bridge for CIARA browser automation.",
   "permissions": [
     "tabs",
     "activeTab",
@@ -28,7 +28,7 @@
     }
   ],
   "action": {
-    "default_title": "Moonwalk Browser Bridge",
+    "default_title": "CIARA Browser Bridge",
     "default_popup": "popup.html"
   }
 }

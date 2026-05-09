@@ -1,5 +1,5 @@
 """
-Moonwalk — Vault Memory Tools
+CIARA — Vault Memory Tools
 ===============================
 Registered tools that let the LLM store, recall, and manage permanent
 cross-session memory entries via the VaultMemory system.

@@ -1,5 +1,5 @@
 """
-Moonwalk — Sub-Agent Manager
+CIARA — Sub-Agent Manager
 ==============================
 Orchestrates parallel execution of independent milestone groups.
 

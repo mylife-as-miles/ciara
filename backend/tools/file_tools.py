@@ -1,5 +1,5 @@
 """
-Moonwalk — File I/O Tools
+CIARA — File I/O Tools
 ===========================
 Tools for reading, writing, listing, and editing files
 on the user's Mac.

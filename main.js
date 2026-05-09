@@ -37,10 +37,10 @@ let lastWakeAt = 0;
 let pythonProcess = null;
 let ownsPythonProcess = false;
 
-const BACKEND_WS_URL = process.env.MOONWALK_BACKEND_WS_URL || "ws://127.0.0.1:8000/ws";
-const BACKEND_HOST = process.env.MOONWALK_BACKEND_HOST || "127.0.0.1";
-const BACKEND_PORT = Number(process.env.MOONWALK_BACKEND_PORT || "8000");
-const BRIDGE_PORT = Number(process.env.MOONWALK_BROWSER_BRIDGE_PORT || "8765");
+const BACKEND_WS_URL = process.env.CIARA_BACKEND_WS_URL || "ws://127.0.0.1:8000/ws";
+const BACKEND_HOST = process.env.CIARA_BACKEND_HOST || "127.0.0.1";
+const BACKEND_PORT = Number(process.env.CIARA_BACKEND_PORT || "8000");
+const BRIDGE_PORT = Number(process.env.CIARA_BROWSER_BRIDGE_PORT || "8765");
 const BACKEND_READY_SENTINEL = "[Backend] READY";
 
 // Venv lives in userData for packaged builds (writable, survives app updates)
@@ -48,7 +48,7 @@ const getVenvRoot = () => IS_PACKAGED
   ? path.join(app.getPath("userData"), "venv")
   : path.join(__dirname, "venv");
 
-// Bundled Picovoice key — enables the "Hey Moonwalk" wake word out of the box.
+// Bundled Picovoice key — enables the "Hey CIARA" wake word out of the box.
 // Users can replace this with their own key from console.picovoice.ai
 const BUNDLED_PICOVOICE_KEY = "lDvqq7J641WbqdzMsPCdLlawELhfGZOGhaceFzl3ZYYYzeeuXq55YA==";
 
@@ -119,7 +119,7 @@ function runSetup(venvRoot) {
 
     const setup = spawn("bash", [setupPath], {
       cwd: IS_PACKAGED ? APP_ROOT : __dirname,
-      env: { ...process.env, MOONWALK_VENV_DIR: venvRoot },
+      env: { ...process.env, CIARA_VENV_DIR: venvRoot },
       stdio: "pipe",
     });
 
@@ -172,13 +172,13 @@ async function startPythonBackend() {
   // Use saved Picovoice key if set, otherwise fall back to the bundled default
   spawnEnv.PICOVOICE_ACCESS_KEY = savedCreds?.picovoice_key || BUNDLED_PICOVOICE_KEY;
 
-  const moonwalkDataDir = path.join(app.getPath("userData"), "moonwalk-data");
+  const ciaraDataDir = path.join(app.getPath("userData"), "ciara-data");
   try {
-    fs.mkdirSync(moonwalkDataDir, { recursive: true });
+    fs.mkdirSync(ciaraDataDir, { recursive: true });
   } catch (err) {
-    console.error("[Backend] Could not create Moonwalk data dir:", moonwalkDataDir, err);
+    console.error("[Backend] Could not create CIARA data dir:", ciaraDataDir, err);
   }
-  spawnEnv.MOONWALK_DATA_DIR = moonwalkDataDir;
+  spawnEnv.CIARA_DATA_DIR = ciaraDataDir;
 
   // Start the python process
   pythonProcess = spawn(venvPythonPath, [scriptPath], {
@@ -501,8 +501,8 @@ const CHROME_EXT_SOURCE = IS_PACKAGED
 ipcMain.handle("extension:export", async () => {
   // Let customer choose where to save the extension folder
   const { canceled, filePath: destPath } = await dialog.showSaveDialog(mainWindow, {
-    title: "Save Moonwalk Browser Extension",
-    defaultPath: path.join(app.getPath("downloads"), "moonwalk-browser-bridge"),
+    title: "Save CIARA Browser Extension",
+    defaultPath: path.join(app.getPath("downloads"), "ciara-browser-bridge"),
     buttonLabel: "Save Extension",
   });
   if (canceled || !destPath) return { success: false, reason: "cancelled" };
@@ -517,20 +517,20 @@ ipcMain.handle("extension:export", async () => {
 
     // Write a friendly install guide inside
     const guide = [
-      "# Moonwalk Browser Bridge — Install Guide\n",
+      "# CIARA Browser Bridge — Install Guide\n",
       "## Quick Install (2 minutes)\n",
       "1. Open Google Chrome",
       "2. Go to chrome://extensions",
       "3. Turn ON 'Developer mode' (top-right toggle)",
       "4. Click 'Load unpacked' (top-left)",
       "5. Select THIS folder",
-      "6. Done! The Moonwalk extension is now installed.\n",
+      "6. Done! The CIARA extension is now installed.\n",
       "## Pin the Extension",
       "Click the puzzle piece icon in Chrome's toolbar,",
-      "then click the pin next to 'Moonwalk Browser Bridge'.\n",
+      "then click the pin next to 'CIARA Browser Bridge'.\n",
       "## Connection",
-      "The extension connects automatically to the Moonwalk desktop app.",
-      "Make sure Moonwalk is running before using browser features.\n",
+      "The extension connects automatically to the CIARA desktop app.",
+      "Make sure CIARA is running before using browser features.\n",
     ].join("\n");
     fs.writeFileSync(path.join(destPath, "INSTALL.md"), guide);
 

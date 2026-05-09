@@ -1,5 +1,5 @@
 """
-Moonwalk — Gemini Provider (Cloud)
+CIARA — Gemini Provider (Cloud)
 =====================================
 Google Gemini — cloud, multimodal, highest quality.
 """

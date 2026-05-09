@@ -1,5 +1,5 @@
 """
-Moonwalk — Memory System
+CIARA — Memory System
 =========================
 Short-term: conversation turns (in-memory + persisted sessions)
 Working:    action log, entity ledger, session goal (current task context)
@@ -19,23 +19,23 @@ from collections import deque, Counter
 from dataclasses import dataclass, field
 from typing import Optional, List, Any
 
-from runtime_paths import ensure_moonwalk_data_layout, get_moonwalk_data_root
+from runtime_paths import ensure_ciara_data_layout, get_ciara_data_root
 
 
-def _moonwalk_root() -> str:
-    return get_moonwalk_data_root()
+def _ciara_root() -> str:
+    return get_ciara_data_root()
 
 
 def _sessions_dir() -> str:
-    return os.path.join(_moonwalk_root(), "sessions")
+    return os.path.join(_ciara_root(), "sessions")
 
 
 def _vault_dir() -> str:
-    return os.path.join(_moonwalk_root(), "vault")
+    return os.path.join(_ciara_root(), "vault")
 
 
 def _ensure_dir():
-    ensure_moonwalk_data_layout()
+    ensure_ciara_data_layout()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -707,7 +707,7 @@ class UserPreferences:
 
     def __init__(self):
         _ensure_dir()
-        self._path = os.path.join(_moonwalk_root(), "preferences.json")
+        self._path = os.path.join(_ciara_root(), "preferences.json")
         self._data: dict = self._load()
 
     def _load(self) -> dict:
@@ -777,7 +777,7 @@ class UserProfile:
 
     def __init__(self):
         _ensure_dir()
-        self._path = os.path.join(_moonwalk_root(), "user_profile.json")
+        self._path = os.path.join(_ciara_root(), "user_profile.json")
         self._profile: dict = self._load()
 
     def _load(self) -> dict:
@@ -869,7 +869,7 @@ class TaskStore:
 
     def __init__(self):
         _ensure_dir()
-        self._path = os.path.join(_moonwalk_root(), "tasks.json")
+        self._path = os.path.join(_ciara_root(), "tasks.json")
         self._tasks: dict[str, BackgroundTask] = self._load()
 
     def _load(self) -> dict[str, BackgroundTask]:
@@ -961,7 +961,7 @@ class VaultMemory:
     """Permanent cross-session memory vault.
 
     Stores typed entries (text, structured data, file references) as individual
-    JSON files under ``<MOONWALK_DATA_DIR>/vault/<category>/``.  Supports TF-IDF search
+    JSON files under ``<CIARA_DATA_DIR>/vault/<category>/``.  Supports TF-IDF search
     across all entries for recall.
     """
 

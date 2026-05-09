@@ -1,4 +1,4 @@
-# Moonwalk
+# CIARA
 
 **AI desktop assistant for macOS** — a transparent glass-pill overlay that uses voice and text to control your Mac.
 
@@ -7,7 +7,7 @@ Built with Electron + Python. Thinks with LLMs. Acts through Accessibility APIs 
 ---
 
 <p align="center">
-  <img src="docs/screenshots/Moonwalk.png" alt="Logo" width="480"/>
+  <img src="docs/screenshots/CIARA.png" alt="Logo" width="480"/>
 </p>
 
 ---
@@ -15,11 +15,11 @@ Demo Video: [https://youtu.be/u3QoaT3pIMs]
 
 ## Features
 
-- **Voice-first** — Say "Hey Moonwalk" or Press `⌘⇧Space`, speak naturally, watch it act
+- **Voice-first** — Say "Hey CIARA" or Press `⌘⇧Space`, speak naturally, watch it act
 - **SPAV Agent** — Sense → Plan → Act → Verify loop with milestone-based execution
 - **Multi-modal responses** — Cards, tables, rich text, step timelines, image viewer
 - **Browser automation** — Chrome extension bridges web actions (search, fill forms, extract data)
-- **Local-first** — Python backend and data stay on your machine under `MOONWALK_DATA_DIR` / `~/.moonwalk`; configure API keys for LLM/TTS providers as needed
+- **Local-first** — Python backend and data stay on your machine under `CIARA_DATA_DIR` / `~/.ciara`; configure API keys for LLM/TTS providers as needed
 
 ---
 
@@ -29,7 +29,7 @@ The glass pill morphs between four states:
 
 <table>
 <tr>
-<td align="center"><strong>Idle</strong><br/><img src="docs/screenshots/pill-idle.svg" width="280"/><br/><code>220px</code> · mic icon + "Hey Moonwalk"</td>
+<td align="center"><strong>Idle</strong><br/><img src="docs/screenshots/pill-idle.svg" width="280"/><br/><code>220px</code> · mic icon + "Hey CIARA"</td>
 <td align="center"><strong>Listening</strong><br/><img src="docs/screenshots/pill-listening.svg" width="280"/><br/><code>440px</code> · typewriter transcription</td>
 </tr>
 <tr>
@@ -61,7 +61,7 @@ The glass pill morphs between four states:
 ## Architecture
 
 <p align="center">
-  <img src="docs/screenshots/architecture.svg" alt="Moonwalk Architecture" width="800"/>
+  <img src="docs/screenshots/architecture.svg" alt="CIARA Architecture" width="800"/>
 </p>
 
 ### Agent Loop (SPAV)
@@ -76,8 +76,8 @@ The glass pill morphs between four states:
 
 ```bash
 # 1. Clone & install
-git clone https://github.com/<your-org>/Moonwalk.git
-cd Moonwalk
+git clone https://github.com/<your-org>/CIARA.git
+cd CIARA
 npm install
 
 # 2. Python environment
@@ -107,7 +107,7 @@ npm start
 ## Project Structure
 
 ```
-Moonwalk/
+CIARA/
 ├── main.js                  # Electron main process
 ├── preload.js               # IPC bridge (auth, credentials, mouse)
 ├── package.json             # Electron + electron-builder config
@@ -158,7 +158,7 @@ Moonwalk/
 
 ## 🧩 Chrome Extension
 
-The **Moonwalk Browser Bridge** extension enables web automation:
+The **CIARA Browser Bridge** extension enables web automation:
 
 1. Install from `chrome_extension/` → `chrome://extensions` → Load unpacked
 2. Open **Options** → set Bridge URL + Auth Token
@@ -189,7 +189,7 @@ python benchmarks/run_benchmarks.py
 # Build universal macOS DMG
 npx electron-builder --mac --universal
 
-# Output: dist/Moonwalk-1.0.0-universal.dmg
+# Output: dist/CIARA-1.0.0-universal.dmg
 ```
 
 See [docs/GUIDE.md](docs/GUIDE.md) for icon creation, code signing, notarization, and distribution via GitHub Releases.
@@ -203,6 +203,6 @@ MIT
 ---
 
 <p align="center">
-  <strong>Moonwalk</strong> — Your AI copilot for macOS<br/>
+  <strong>CIARA</strong> — Your AI copilot for macOS<br/>
   <sub>Voice-first · Glass UI · SPAV Agent · Local-first</sub>
 </p>

@@ -1,5 +1,5 @@
 """
-Moonwalk — Browser Search Engine
+CIARA — Browser Search Engine
 ================================
 Implements the "Antigravity" architecture for DOM searching:
 1. Local, heuristic-based scoring (no LLM latency).

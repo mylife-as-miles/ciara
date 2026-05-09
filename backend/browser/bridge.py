@@ -1,5 +1,5 @@
 """
-Moonwalk — Browser Bridge State
+CIARA — Browser Bridge State
 ===============================
 Tracks extension connection state and queued browser actions.
 """
@@ -21,7 +21,7 @@ class BrowserBridge:
     STALE_THRESHOLD: float = 60.0
 
     def __init__(self):
-        configured = os.environ.get("MOONWALK_BROWSER_BRIDGE_TOKEN", "").strip()
+        configured = os.environ.get("CIARA_BROWSER_BRIDGE_TOKEN", "").strip()
         self._session_token = configured or "dev-bridge-token"
         self._connected_session_id: Optional[str] = None
         self._last_seen_at: float = 0.0

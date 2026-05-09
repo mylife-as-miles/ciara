@@ -64,7 +64,7 @@
   <rect width="1100" height="820" rx="20" fill="#f5f5f7"/>
 
   <!-- Title bar -->
-  <text x="550" y="48" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f" letter-spacing="-0.02em">Moonwalk · System Overview</text>
+  <text x="550" y="48" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f" letter-spacing="-0.02em">CIARA · System Overview</text>
   <text x="550" y="72" text-anchor="middle" font-size="13" fill="#6e6e73">Local-first stack from user input to task execution</text>
 
   <!-- ═══════════════════════════════════════════ -->
@@ -145,7 +145,7 @@
   <!-- Agent Core -->
   <g filter="url(#shadowSm)">
     <rect x="90" y="355" width="180" height="56" rx="12" fill="white" stroke="rgba(175,82,222,0.25)" stroke-width="1.5"/>
-    <text x="180" y="378" text-anchor="middle" font-size="12" font-weight="600" fill="#1d1d1f">MoonwalkAgentV2</text>
+    <text x="180" y="378" text-anchor="middle" font-size="12" font-weight="600" fill="#1d1d1f">CiaraAgentV2</text>
     <text x="180" y="394" text-anchor="middle" font-size="9" fill="#af52de" font-weight="500">SPAV Loop · core_v2.py</text>
   </g>
 
@@ -233,7 +233,7 @@
     <rect x="538" y="618" width="36" height="36" rx="10" fill="url(#accentYellow)" opacity="0.14"/>
     <text x="556" y="641" text-anchor="middle" font-size="18">💾</text>
     <text x="646" y="632" text-anchor="middle" font-size="14" font-weight="600" fill="#1d1d1f">Local data</text>
-    <text x="646" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">MOONWALK_DATA_DIR</text>
+    <text x="646" y="650" text-anchor="middle" font-size="10" fill="#6e6e73">CIARA_DATA_DIR</text>
     <text x="646" y="664" text-anchor="middle" font-size="9" fill="#c9a227">sessions · vault · plans · screenshots</text>
   </g>
 
@@ -285,5 +285,5 @@
   </g>
 
   <!-- Version tag -->
-  <text x="1040" y="800" text-anchor="end" font-size="9" fill="#aeaeb2">Moonwalk v1.0.0</text>
+  <text x="1040" y="800" text-anchor="end" font-size="9" fill="#aeaeb2">CIARA v1.0.0</text>
 </svg>

@@ -1,5 +1,5 @@
 """
-Moonwalk — Typed tool and bridge envelopes.
+CIARA — Typed tool and bridge envelopes.
 """
 
 from __future__ import annotations

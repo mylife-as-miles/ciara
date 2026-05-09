@@ -1,5 +1,5 @@
 """
-Moonwalk — Canonical runtime state store.
+CIARA — Canonical runtime state store.
 """
 
 from __future__ import annotations

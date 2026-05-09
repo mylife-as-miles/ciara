@@ -9,7 +9,7 @@ import os
 import time
 from typing import Any, Optional
 
-from runtime_paths import ensure_moonwalk_data_layout, get_milestones_dir, get_plans_dir
+from runtime_paths import ensure_ciara_data_layout, get_milestones_dir, get_plans_dir
 
 
 def _atomic_write_json(path: str, payload: dict) -> None:
@@ -28,7 +28,7 @@ def journal_pending_approval(
 ) -> None:
     """Called when a plan is shown to the user for approval."""
     try:
-        ensure_moonwalk_data_layout()
+        ensure_ciara_data_layout()
         ts = int(time.time())
         fname = f"pending_{plan_id}_{ts}.json"
         payload: dict[str, Any] = {
@@ -58,7 +58,7 @@ def journal_execution_snapshot(
     label: short id (e.g. execution_id or plan_id)
     """
     try:
-        ensure_moonwalk_data_layout()
+        ensure_ciara_data_layout()
         ts = int(time.time())
         safe_label = "".join(c if c.isalnum() or c in "-_" else "_" for c in label)[:48]
         fname = f"{phase}_{safe_label}_{ts}.json"

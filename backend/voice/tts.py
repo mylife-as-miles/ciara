@@ -1,5 +1,5 @@
 """
-Moonwalk — Streamed TTS via Google Cloud Text-to-Speech (Neural2)
+CIARA — Streamed TTS via Google Cloud Text-to-Speech (Neural2)
 ==================================================================
 Splits response text into sentences, synthesizes each sentence
 concurrently, and yields audio chunks in order so the first sentence
@@ -29,8 +29,8 @@ print = partial(print, flush=True)
 
 
 def tts_backend() -> str:
-    """Prefer ElevenLabs when configured unless MOONWALK_TTS_PROVIDER forces Google."""
-    explicit = os.environ.get("MOONWALK_TTS_PROVIDER", "").strip().lower()
+    """Prefer ElevenLabs when configured unless CIARA_TTS_PROVIDER forces Google."""
+    explicit = os.environ.get("CIARA_TTS_PROVIDER", "").strip().lower()
     if explicit in ("google", "elevenlabs"):
         return explicit
     if os.environ.get("ELEVENLABS_API_KEY", "").strip():
@@ -43,9 +43,9 @@ def tts_backend() -> str:
 # ═══════════════════════════════════════════════════════════════
 
 # Default Neural2 voice — natural, mid-cost ($16/1M chars)
-DEFAULT_VOICE = os.environ.get("MOONWALK_TTS_VOICE", "en-US-Neural2-J")
-DEFAULT_LANGUAGE = os.environ.get("MOONWALK_TTS_LANGUAGE", "en-US")
-DEFAULT_SPEAKING_RATE = float(os.environ.get("MOONWALK_TTS_SPEED", "1.05"))
+DEFAULT_VOICE = os.environ.get("CIARA_TTS_VOICE", "en-US-Neural2-J")
+DEFAULT_LANGUAGE = os.environ.get("CIARA_TTS_LANGUAGE", "en-US")
+DEFAULT_SPEAKING_RATE = float(os.environ.get("CIARA_TTS_SPEED", "1.05"))
 
 # Audio encoding: OGG_OPUS is compact and plays natively in Chromium
 AUDIO_ENCODING = "OGG_OPUS"
@@ -340,7 +340,7 @@ class ElevenLabsTTSEngine:
         self.voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM").strip()
         self.model_id = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3").strip()
         self._enabled = bool(self.api_key and self.voice_id)
-        timeout_s = os.environ.get("MOONWALK_TTS_TIMEOUT", "120")
+        timeout_s = os.environ.get("CIARA_TTS_TIMEOUT", "120")
         self._timeout = float(timeout_s or 120)
 
     @property
@@ -442,7 +442,7 @@ _tts_engine: Optional[Union[TTSEngine, ElevenLabsTTSEngine]] = None
 
 
 def get_tts_engine() -> Union[TTSEngine, ElevenLabsTTSEngine]:
-    """Google Cloud or ElevenLabs TTS singleton based on MOONWALK_TTS_PROVIDER / keys."""
+    """Google Cloud or ElevenLabs TTS singleton based on CIARA_TTS_PROVIDER / keys."""
     global _tts_engine
     if _tts_engine is None:
         use_el = tts_backend() == "elevenlabs"

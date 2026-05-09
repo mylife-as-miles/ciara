@@ -1,4 +1,4 @@
-# Moonwalk — Architecture
+# CIARA — Architecture
 
 > **This is the single authoritative architecture document.** It reflects the current production runtime.
 
@@ -35,13 +35,13 @@
                     ┌─────────────────────▼───────────────────┐
                     │       local_server.py  (Python WS)       │
                     │  • receive text/audio/actions            │
-                    │  • spawn MoonwalkAgentV2.run()           │
+                    │  • spawn CiaraAgentV2.run()           │
                     │  • stream TTS chunks back to renderer    │
                     │  • handle cancel / conversation mode     │
                     └──────────────────┬──────────────────────┘
                                        │
                     ┌──────────────────▼──────────────────────┐
-                    │          MoonwalkAgentV2                 │
+                    │          CiaraAgentV2                 │
                     │  (backend/agent/core_v2.py)              │
                     │  SPAV loop:                              │
                     │  Sense → Route → Plan/Act → Verify       │
@@ -49,7 +49,7 @@
 ```
 
 **Key properties:**
-- Electron overlay sits always-on-top; activated by wake word (`Hey Moonwalk`) or Escape/click
+- Electron overlay sits always-on-top; activated by wake word (`Hey CIARA`) or Escape/click
 - Single WebSocket connection per session on `localhost:8000`
 - Python backend is spawned as a child process by `main.js` on app start
 - All agent work runs in the Python process; Electron is a thin display shell
@@ -93,7 +93,7 @@
 
 ## 3. Agent Pipeline — SPAV Loop
 
-**File:** `backend/agent/core_v2.py` — `MoonwalkAgentV2`
+**File:** `backend/agent/core_v2.py` — `CiaraAgentV2`
 
 The core loop follows **Sense → Route → Plan → Act → Verify**:
 
@@ -345,7 +345,7 @@ No visual indicator beyond the standard blue listening glow (existing `variant-l
 **Files:** `backend/agent/memory.py`, `backend/agent/rag.py`, `backend/runtime_paths.py`, `backend/servers/local_augment.py`
 
 - **Working memory** — per-request context built during milestone execution (tool results, observations, intermediate facts)
-- **Local persistence** — JSON sessions, vault documents, screenshots, plans/milestones/memories under `MOONWALK_DATA_DIR` (see `runtime_paths.py`)
+- **Local persistence** — JSON sessions, vault documents, screenshots, plans/milestones/memories under `CIARA_DATA_DIR` (see `runtime_paths.py`)
 - **RAG** (`rag.py`) — retrieval utilities over stored documents; the desktop server optionally prefixes prompts with TF-IDF vault recall (`local_augment.py`)
 - Memory is updated by the verifier after successful milestone completion
 
@@ -388,7 +388,7 @@ backend/
                             TTS streaming, cancel, conversation mode
     local_augment.py        Optional vault TF-IDF prefix for agent prompts
   agent/
-    core_v2.py              MoonwalkAgentV2 — SPAV loop, ack, fast path,
+    core_v2.py              CiaraAgentV2 — SPAV loop, ack, fast path,
                             personality, conversation mode markers
     task_planner.py         MilestonePlan builder
     planner.py              Milestone + ExecutionStep dataclasses
@@ -413,7 +413,7 @@ backend/
   providers/
     (LLM provider adapters)
   runtime_state.py          Shared cancel flag (RuntimeStateStore)
-  runtime_paths.py          MOONWALK_DATA_DIR layout (sessions, vault, …)
+  runtime_paths.py          CIARA_DATA_DIR layout (sessions, vault, …)
 
 renderer/
   index.html                Glass pill HTML — stop button, response card

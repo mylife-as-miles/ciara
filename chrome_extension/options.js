@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-//  Moonwalk — Extension Options Page
+//  CIARA — Extension Options Page
 //  Configurable bridge URL and auth token (stored in chrome.storage.sync)
 // ═══════════════════════════════════════════════════════════════
 
@@ -52,7 +52,7 @@ async function saveSettings() {
   showStatus("Settings saved! Restart the extension to apply.");
 
   // Notify background script to reconnect
-  chrome.runtime.sendMessage({ type: "moonwalk_settings_updated" });
+  chrome.runtime.sendMessage({ type: "ciara_settings_updated" });
 }
 
 async function resetToDefaults() {
@@ -60,7 +60,7 @@ async function resetToDefaults() {
   bridgeUrlEl.value = DEFAULTS.bridgeUrl;
   bridgeTokenEl.value = DEFAULTS.bridgeToken;
   showStatus("Reset to defaults. Restart the extension to apply.");
-  chrome.runtime.sendMessage({ type: "moonwalk_settings_updated" });
+  chrome.runtime.sendMessage({ type: "ciara_settings_updated" });
 }
 
 saveBtn.addEventListener("click", saveSettings);

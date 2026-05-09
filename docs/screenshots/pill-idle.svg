@@ -37,8 +37,8 @@
     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" transform="scale(0.917)"/>
   </g>
 
-  <!-- "Hey Moonwalk" text — 18px, font-weight 500, color #1d1d1f -->
-  <text x="262" y="106" class="label" font-size="18" font-weight="500" fill="#1d1d1f" letter-spacing="-0.18">Hey Moonwalk</text>
+  <!-- "Hey CIARA" text — 18px, font-weight 500, color #1d1d1f -->
+  <text x="262" y="106" class="label" font-size="18" font-weight="500" fill="#1d1d1f" letter-spacing="-0.18">Hey CIARA</text>
 
   <!-- State label below -->
   <text x="300" y="168" class="label" font-size="12" font-weight="500" fill="#86868b" text-anchor="middle" letter-spacing="0.5" text-transform="uppercase">IDLE STATE</text>

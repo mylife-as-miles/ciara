@@ -41,7 +41,7 @@ POWERFUL_MODEL = "gemma-4-31b-it"
 ROUTING_MODEL = "gemma-4-26b-a4b-it"
 
 # The routing prompt that Flash uses to classify requests
-ROUTING_PROMPT = """You are a routing classifier for a desktop AI assistant called Moonwalk.
+ROUTING_PROMPT = """You are a routing classifier for a desktop AI assistant called CIARA.
 
 Your job: decide which AI model should handle this user request.
 

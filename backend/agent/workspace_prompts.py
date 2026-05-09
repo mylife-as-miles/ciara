@@ -2,12 +2,12 @@
 Optional user-authored markdown at the data root (OpenClaw-style workspace files).
 
 Reads, when present:
-  MOONWALK.md — primary user instructions / product notes
+  CIARA.md — primary user instructions / product notes
   SOUL.md     — stable identity, tone, boundaries
   AGENTS.md   — how the assistant should behave
   TOOLS.md    — extra tool usage notes (does not replace the real tool registry)
 
-Disable entirely: MOONWALK_DISABLE_WORKSPACE_MD=1
+Disable entirely: CIARA_DISABLE_WORKSPACE_MD=1
 """
 
 from __future__ import annotations
@@ -16,13 +16,13 @@ import os
 from functools import partial
 from typing import Optional
 
-from runtime_paths import get_moonwalk_data_root
+from runtime_paths import get_ciara_data_root
 
 print = partial(print, flush=True)
 
 # Order: general → identity → behavior → tool hints
 _WORKSPACE_FILES = (
-    "MOONWALK.md",
+    "CIARA.md",
     "SOUL.md",
     "AGENTS.md",
     "TOOLS.md",
@@ -36,12 +36,12 @@ _cache_text: str = ""
 
 
 def _disabled() -> bool:
-    v = (os.environ.get("MOONWALK_DISABLE_WORKSPACE_MD") or "").strip().lower()
+    v = (os.environ.get("CIARA_DISABLE_WORKSPACE_MD") or "").strip().lower()
     return v in ("1", "true", "yes", "on")
 
 
 def _snapshot_mtimes() -> tuple[tuple[str, float], ...]:
-    root = get_moonwalk_data_root()
+    root = get_ciara_data_root()
     out: list[tuple[str, float]] = []
     for name in _WORKSPACE_FILES:
         path = os.path.join(root, name)
@@ -74,7 +74,7 @@ def load_workspace_prompt_bundle() -> str:
 
     parts: list[str] = []
     total = 0
-    root = get_moonwalk_data_root()
+    root = get_ciara_data_root()
 
     for name in _WORKSPACE_FILES:
         path = os.path.join(root, name)
@@ -96,7 +96,7 @@ def load_workspace_prompt_bundle() -> str:
         if not block:
             continue
         if truncated:
-            block += "\n…[truncated by MOONWALK workspace file size limit]"
+            block += "\n…[truncated by CIARA workspace file size limit]"
 
         header = f"### From `{name}` (user workspace)\n"
         segment = header + block

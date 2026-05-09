@@ -1,5 +1,5 @@
 """
-Moonwalk — Browser Models
+CIARA — Browser Models
 =========================
 Typed contracts for stable browser element mapping.
 """

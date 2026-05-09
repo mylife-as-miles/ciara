@@ -1,5 +1,5 @@
 """
-Moonwalk — World State V2
+CIARA — World State V2
 ==========================
 Structured context representation replacing raw strings.
 Provides typed fields for desktop state, user intent, and extracted entities.

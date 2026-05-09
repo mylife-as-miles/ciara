@@ -1,4 +1,4 @@
-# Moonwalk Agentic IDE
+# CIARA Agentic IDE
 
 Browser-based IDE for the current workspace with:
 

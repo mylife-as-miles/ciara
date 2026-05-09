@@ -47,7 +47,7 @@
   <rect width="900" height="680" fill="url(#bg-grad)" rx="0"/>
 
   <!-- Title -->
-  <text x="450" y="38" class="font" font-size="13" font-weight="600" fill="#86868b" text-anchor="middle" letter-spacing="1.5">MOONWALK ARCHITECTURE</text>
+  <text x="450" y="38" class="font" font-size="13" font-weight="600" fill="#86868b" text-anchor="middle" letter-spacing="1.5">CIARA ARCHITECTURE</text>
 
   <!-- ═══════════════════════════════════════ -->
   <!-- macOS Desktop region                    -->
@@ -168,7 +168,7 @@
   <line x1="108" y1="452" x2="108" y2="464" stroke="#ff9500" stroke-width="1.5"/>
   <ellipse cx="98" cy="464" rx="10" ry="5" fill="none" stroke="#ff9500" stroke-width="1.5"/>
   <text x="118" y="458" class="font" font-size="15" font-weight="600" fill="#1d1d1f">Local data</text>
-  <text x="92" y="486" class="mono" font-size="10" font-weight="500" fill="#86868b">MOONWALK_DATA_DIR</text>
+  <text x="92" y="486" class="mono" font-size="10" font-weight="500" fill="#86868b">CIARA_DATA_DIR</text>
   <text x="92" y="506" class="font" font-size="12" font-weight="400" fill="#6e6e73">sessions · vault · screenshots</text>
   <text x="92" y="526" class="font" font-size="12" font-weight="400" fill="#6e6e73">plans · milestones · memories</text>
   <text x="92" y="546" class="font" font-size="12" font-weight="400" fill="#6e6e73">runtime_paths.py</text>

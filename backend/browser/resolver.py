@@ -1,5 +1,5 @@
 """
-Moonwalk — Browser Resolver
+CIARA — Browser Resolver
 ===========================
 Deterministic candidate ranking for stable browser ref selection.
 """

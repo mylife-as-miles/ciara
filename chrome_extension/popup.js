@@ -44,12 +44,12 @@ function renderStatus(status) {
 }
 
 async function loadStatus() {
-  const status = await chrome.runtime.sendMessage({ type: 'moonwalk_get_status' });
+  const status = await chrome.runtime.sendMessage({ type: 'ciara_get_status' });
   renderStatus(status);
 }
 
 async function requestSnapshot() {
-  const status = await chrome.runtime.sendMessage({ type: 'moonwalk_request_snapshot' });
+  const status = await chrome.runtime.sendMessage({ type: 'ciara_request_snapshot' });
   renderStatus(status);
 }
 

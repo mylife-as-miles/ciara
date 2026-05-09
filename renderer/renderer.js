@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────
-   MOONWALK – Renderer (Raw Audio Streaming to Backend)
+   CIARA – Renderer (Raw Audio Streaming to Backend)
    ───────────────────────────────────────────────────────────── */
 
 const State = Object.freeze({
@@ -176,7 +176,7 @@ function setState(next, { tier = "", text = null, appName = "", iconUrl = "", fo
     glow.classList.remove('active');
     setIslandState('state-idle');
     switchContent(uiIdle);
-    statusEl.innerText = "Hey Moonwalk";
+    statusEl.innerText = "Hey CIARA";
     typewriterText.innerText = '';
   }
   else if (next === State.LISTENING) {
@@ -272,7 +272,7 @@ function submitCommandPanel() {
   }
 
   if (!app.ws || app.ws.readyState !== WebSocket.OPEN) {
-    showResponseCard("Moonwalk is not connected. Try again in a moment.");
+    showResponseCard("CIARA is not connected. Try again in a moment.");
     return;
   }
 
@@ -437,7 +437,7 @@ function showResponseCard(fullText, awaitInput = false) {
       } else {
         setIslandState('state-idle');
         switchContent(uiIdle);
-        statusEl.innerText = "Hey Moonwalk";
+        statusEl.innerText = "Hey CIARA";
         app.autoResetTimer = setTimeout(() => {
           dismissResponseCard();
           app.current = State.IDLE;
@@ -1032,7 +1032,7 @@ function afterModalShow(awaitInput, defaultTimeout, persistent = false) {
   } else {
     setIslandState('state-idle');
     switchContent(uiIdle);
-    statusEl.innerText = "Hey Moonwalk";
+    statusEl.innerText = "Hey CIARA";
     if (!persistent) scheduleModalAutoDismiss(false, defaultTimeout);
   }
 }
@@ -1261,7 +1261,7 @@ function connectWebSocket() {
     app.ws = new WebSocket(WS_URL);
     app.ws.addEventListener("open", () => {
       app.reconnectDelay = 700;
-      statusEl.innerText = "Hey Moonwalk";
+      statusEl.innerText = "Hey CIARA";
       // (Re-)start audio streaming now that the WS is connected.
       // This handles the case where getUserMedia failed at boot (before
       // mic permission was granted during onboarding) or where the WS

@@ -1,5 +1,5 @@
 """
-Moonwalk — Few-Shot Example Bank
+CIARA — Few-Shot Example Bank
 ==================================
 Stores successful (request → plan) pairs and retrieves the most relevant
 ones for LLM planning via text similarity. This acts as the agent's 
@@ -18,11 +18,11 @@ from collections import Counter
 from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 
-from runtime_paths import ensure_moonwalk_data_layout, get_moonwalk_data_root
+from runtime_paths import ensure_ciara_data_layout, get_ciara_data_root
 
 
 def _example_bank_path() -> str:
-    return os.path.join(get_moonwalk_data_root(), "example_bank.json")
+    return os.path.join(get_ciara_data_root(), "example_bank.json")
 
 
 MAX_EXAMPLES = 200  # Cap to prevent unbounded growth
@@ -152,7 +152,7 @@ class ExampleBank:
     """
 
     def __init__(self):
-        ensure_moonwalk_data_layout()
+        ensure_ciara_data_layout()
         self._examples: List[PlanExample] = self._load()
         # Pre-tokenize for fast similarity search
         self._token_cache: dict[int, List[str]] = {}

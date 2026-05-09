@@ -1,5 +1,5 @@
 """
-Moonwalk — LLM Provider Base Types
+CIARA — LLM Provider Base Types
 =====================================
 Abstract LLM interface and shared response types.
 """

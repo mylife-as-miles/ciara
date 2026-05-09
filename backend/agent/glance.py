@@ -1,5 +1,5 @@
 """
-Moonwalk — Glance: Lightweight Parallel Screen Perception
+CIARA — Glance: Lightweight Parallel Screen Perception
 ==========================================================
 
 A fast, token-efficient screen awareness layer that runs alongside

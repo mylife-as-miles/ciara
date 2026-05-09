@@ -1,5 +1,5 @@
 """
-Moonwalk — RAG Engine (Retrieval-Augmented Generation)
+CIARA — RAG Engine (Retrieval-Augmented Generation)
 =======================================================
 Adds helpers for embeddings (Gemini) and formatting vault recall snippets.
 
@@ -30,7 +30,7 @@ from google import genai  # type: ignore[import]
 # ── Configuration ──
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-EMBEDDING_MODEL = os.environ.get("MOONWALK_EMBEDDING_MODEL", "text-embedding-004")
+EMBEDDING_MODEL = os.environ.get("CIARA_EMBEDDING_MODEL", "text-embedding-004")
 EMBEDDING_DIMENSIONS = 768  # text-embedding-004 default
 
 # Cache for computed embeddings (in-memory LRU)
@@ -88,7 +88,7 @@ def format_vault_results_for_prompt(
 
 class RAGEngine:
     """
-    Retrieval-Augmented Generation engine for Moonwalk.
+    Retrieval-Augmented Generation engine for CIARA.
     
     Uses Gemini's text-embedding-004 model for embeddings when needed.
     """

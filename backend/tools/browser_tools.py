@@ -1,5 +1,5 @@
 """
-Moonwalk — Browser Ref Tools
+CIARA — Browser Ref Tools
 ============================
 Agent-facing tools for stable, verified browser element access.
 """

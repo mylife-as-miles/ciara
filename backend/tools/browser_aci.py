@@ -1,5 +1,5 @@
 """
-Moonwalk — Agent-Computer Interface (ACI) Browser Tools
+CIARA — Agent-Computer Interface (ACI) Browser Tools
 ========================================================
 High-level compound browser operations for the LLM agent.
 

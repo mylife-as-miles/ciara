@@ -1,13 +1,13 @@
 // ═══════════════════════════════════════════════════════════════
-//  Moonwalk — Background Service Worker
-//  Manages WebSocket bridge to the Moonwalk backend, action
+//  CIARA — Background Service Worker
+//  Manages WebSocket bridge to the CIARA backend, action
 //  polling, snapshot forwarding, and keepalive pings.
 // ═══════════════════════════════════════════════════════════════
 
 // Defaults — overridden by chrome.storage.sync settings
 const DEFAULT_BRIDGE_URL = "ws://127.0.0.1:8765";
 const DEFAULT_BRIDGE_TOKEN = "dev-bridge-token";
-const EXTENSION_NAME = "moonwalk-browser-bridge";
+const EXTENSION_NAME = "ciara-browser-bridge";
 
 const ACTION_POLL_INTERVAL_MS = 5000;  // Fallback only — actions pushed via WebSocket
 const KEEPALIVE_INTERVAL_MS = 15000;   // ping every 15 s
@@ -56,7 +56,7 @@ async function ensureContentScript(tabId) {
 }
 
 function log(...args) {
-  console.log("[Moonwalk Bridge]", ...args);
+  console.log("[CIARA Bridge]", ...args);
 }
 
 // ── Keepalive ──
@@ -142,10 +142,10 @@ async function executeActionOnTab(action) {
       );
     }
 
-    // ── Scroll action: relay to content script via moonwalk_scroll ──
+    // ── Scroll action: relay to content script via ciara_scroll ──
     if (action?.action === "scroll") {
       const scrollResult = await chrome.tabs.sendMessage(tab.id, {
-        type: "moonwalk_scroll",
+        type: "ciara_scroll",
         direction: metadata.direction || "down",
         amount: metadata.amount || "page",
         sessionId: action?.session_id || sessionId,
@@ -172,7 +172,7 @@ async function executeActionOnTab(action) {
     // ── Highlight action: visually mark elements the agent is reading ──
     if (action?.action === "highlight") {
       const highlightResult = await chrome.tabs.sendMessage(tab.id, {
-        type: "moonwalk_highlight",
+        type: "ciara_highlight",
         agentIds: metadata.agent_ids || [],
         duration: Number(metadata.duration || 3000),
         mode: metadata.mode || "reading",
@@ -201,7 +201,7 @@ async function executeActionOnTab(action) {
     // ── Scanning mode: page-wide AI reading/analysis visual ──
     if (action?.action === "scanning_start") {
       const scanResult = await chrome.tabs.sendMessage(tab.id, {
-        type: "moonwalk_scanning_start",
+        type: "ciara_scanning_start",
         label: metadata.label || "AI analyzing page…",
         duration: Number(metadata.duration || 4000),
       });
@@ -218,7 +218,7 @@ async function executeActionOnTab(action) {
     }
     if (action?.action === "scanning_stop") {
       const stopResult = await chrome.tabs.sendMessage(tab.id, {
-        type: "moonwalk_scanning_stop",
+        type: "ciara_scanning_stop",
       });
       return buildActionResult(
         action,
@@ -233,7 +233,7 @@ async function executeActionOnTab(action) {
     // ── Extract Data action: safely extract specific DOM strings without eval() ──
     if (action?.action === "extract_data") {
       const evalResult = await chrome.tabs.sendMessage(tab.id, {
-        type: "moonwalk_extract_data",
+        type: "ciara_extract_data",
         target: action?.text || "",
         sessionId: action?.session_id || sessionId,
         tabId: String(tab.id),
@@ -254,7 +254,7 @@ async function executeActionOnTab(action) {
 
     if (action?.action === "extract_readability") {
       const readabilityResult = await chrome.tabs.sendMessage(tab.id, {
-        type: "moonwalk_extract_readability",
+        type: "ciara_extract_readability",
         sessionId: action?.session_id || sessionId,
         tabId: String(tab.id),
       });
@@ -284,7 +284,7 @@ async function executeActionOnTab(action) {
             const pageX = (b.x || 0) + (b.width || 0) / 2;
             const pageY = (b.y || 0) + (b.height || 0) / 2;
             chrome.tabs.sendMessage(tab.id, {
-              type: "moonwalk_show_click_pointer",
+              type: "ciara_show_click_pointer",
               pageX,
               pageY,
             }).catch(() => {});
@@ -294,7 +294,7 @@ async function executeActionOnTab(action) {
     }
 
     const result = await chrome.tabs.sendMessage(tab.id, {
-      type: "moonwalk_execute_action",
+      type: "ciara_execute_action",
       action,
       sessionId: action?.session_id || sessionId,
       tabId: String(tab.id),
@@ -302,7 +302,7 @@ async function executeActionOnTab(action) {
 
     // After a successful click, fire the burst animation
     if (result?.ok && isClickLike) {
-      chrome.tabs.sendMessage(tab.id, { type: "moonwalk_trigger_click_burst" }).catch(() => {});
+      chrome.tabs.sendMessage(tab.id, { type: "ciara_trigger_click_burst" }).catch(() => {});
     }
 
     // After a successful action, the content script's MutationObserver
@@ -396,7 +396,7 @@ async function requestSnapshotFromTab(tabId, sessionIdOverride = sessionId) {
   }
 
   const payload = {
-    type: "moonwalk_collect_snapshot",
+    type: "ciara_collect_snapshot",
     sessionId: sessionIdOverride,
     tabId: String(tab.id),
   };
@@ -598,7 +598,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 // ── Internal Message Handling ──
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "moonwalk_snapshot") {
+  if (message?.type === "ciara_snapshot") {
     latestSnapshotByTab.set(message.snapshot?.tab_id || sender.tab?.id || "unknown", message.snapshot);
     const ok = sendToBridge({
       type: "browser_snapshot",
@@ -608,7 +608,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "moonwalk_dom_change") {
+  if (message?.type === "ciara_dom_change") {
     // Forward DOM mutation events from content script to the backend bridge
     const ok = sendToBridge({
       type: "browser_dom_change",
@@ -618,25 +618,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "moonwalk_get_status") {
+  if (message?.type === "ciara_get_status") {
     sendResponse(bridgeStatus());
     return true;
   }
 
-  if (message?.type === "moonwalk_request_snapshot") {
+  if (message?.type === "ciara_request_snapshot") {
     pushActiveTabSnapshot()
       .then(() => sendResponse({ ok: true, ...bridgeStatus() }))
       .catch((error) => sendResponse({ ok: false, error: String(error?.message || error), ...bridgeStatus() }));
     return true;
   }
 
-  if (message?.type === "moonwalk_ping_bridge") {
+  if (message?.type === "ciara_ping_bridge") {
     const ok = sendToBridge({ type: "browser_ping" });
     sendResponse({ ok, authenticated, sessionId });
     return true;
   }
 
-  if (message?.type === "moonwalk_settings_updated") {
+  if (message?.type === "ciara_settings_updated") {
     // Settings changed from options page — reconnect with new config
     loadSettings().then(() => {
       if (bridgeSocket) {

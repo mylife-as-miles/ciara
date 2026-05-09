@@ -1,5 +1,5 @@
 """
-Moonwalk — macOS GUI Tools
+CIARA — macOS GUI Tools
 ============================
 Tools for controlling the macOS desktop: launching apps, clicking,
 typing, keyboard shortcuts, screen reading, and window management.
@@ -29,12 +29,12 @@ from agent.world_state import IntentParser
 
 def _screenshot_work_dir() -> str:
     try:
-        from runtime_paths import ensure_moonwalk_data_layout, get_screenshots_dir
+        from runtime_paths import ensure_ciara_data_layout, get_screenshots_dir
 
-        ensure_moonwalk_data_layout()
+        ensure_ciara_data_layout()
         return get_screenshots_dir()
     except Exception:
-        return os.path.join(tempfile.gettempdir(), "moonwalk")
+        return os.path.join(tempfile.gettempdir(), "ciara")
 
 
 # Well-known services that are websites, not native macOS apps
@@ -2868,7 +2868,7 @@ async def save_image(url: str, filename: str = "") -> str:
 
     try:
         req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Moonwalk/1.0"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) CIARA/1.0"
         })
 
         loop = asyncio.get_event_loop()

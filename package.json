@@ -1,8 +1,8 @@
 {
-  "name": "moonwalk",
+  "name": "ciara",
   "version": "1.0.0",
-  "description": "Moonwalk — AI Desktop Assistant",
-  "author": "Moonwalk",
+  "description": "CIARA — AI Desktop Assistant",
+  "author": "CIARA",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -23,8 +23,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.moonwalk.assistant",
-    "productName": "Moonwalk",
+    "appId": "com.ciara.assistant",
+    "productName": "CIARA",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -50,8 +50,8 @@
         ]
       },
       {
-        "from": "hey_moonwalk.ppn",
-        "to": "hey_moonwalk.ppn"
+        "from": "hey_ciara.ppn",
+        "to": "hey_ciara.ppn"
       },
       {
         "from": "setup.sh",
@@ -86,7 +86,7 @@
       "notarize": false
     },
     "dmg": {
-      "title": "Moonwalk",
+      "title": "CIARA",
       "contents": [
         {
           "x": 130,

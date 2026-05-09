@@ -1,18 +1,18 @@
-# Moonwalk — Complete Guide
+# CIARA — Complete Guide
 
-> **Everything in one place** — from what Moonwalk is and how it was built, to how customers install it and how you run, manage, and ship it.
+> **Everything in one place** — from what CIARA is and how it was built, to how customers install it and how you run, manage, and ship it.
 
-This tree is **local-first**: the Python backend is `backend/servers/local_server.py`, and durable state lives on disk under `MOONWALK_DATA_DIR` (see `backend/runtime_paths.py`). There is **no** Cloud Run, Firestore, or GCS pipeline in this repository.
+This tree is **local-first**: the Python backend is `backend/servers/local_server.py`, and durable state lives on disk under `CIARA_DATA_DIR` (see `backend/runtime_paths.py`). There is **no** Cloud Run, Firestore, or GCS pipeline in this repository.
 
 ---
 
 ## Table of Contents
 
 ### For Customers
-1. [What is Moonwalk?](#1-what-is-moonwalk)
-2. [Installing Moonwalk](#2-installing-moonwalk)
+1. [What is CIARA?](#1-what-is-ciara)
+2. [Installing CIARA](#2-installing-ciara)
 3. [Installing the Chrome Extension](#3-installing-the-chrome-extension)
-4. [Using Moonwalk (Daily Use)](#4-using-moonwalk-daily-use)
+4. [Using CIARA (Daily Use)](#4-using-ciara-daily-use)
 5. [Starting & Stopping the App](#5-starting--stopping-the-app)
 6. [Troubleshooting](#6-troubleshooting)
 
@@ -20,7 +20,7 @@ This tree is **local-first**: the Python backend is `backend/servers/local_serve
 7. [Running the Development Server](#7-running-the-development-server)
 8. [Environment Variables](#8-environment-variables)
 9. [Project Structure](#9-project-structure)
-10. [How Moonwalk Works (Architecture)](#10-how-moonwalk-works-architecture)
+10. [How CIARA Works (Architecture)](#10-how-ciara-works-architecture)
 11. [The SPAV Agent Loop Explained](#11-the-spav-agent-loop-explained)
 12. [Google APIs & Local Data](#12-google-apis--local-data)
 13. [How the Software Was Built](#13-how-the-software-was-built)
@@ -35,9 +35,9 @@ This tree is **local-first**: the Python backend is `backend/servers/local_serve
 
 ---
 
-## 1. What is Moonwalk?
+## 1. What is CIARA?
 
-Moonwalk is an **AI desktop assistant for macOS**. It lives as a small floating glass pill at the top-centre of your screen and responds to your voice or typed commands. You speak to it naturally — *"open my emails"*, *"search for the best AirPods deal"*, *"write a reply to my last message"* — and it does the work on your Mac.
+CIARA is an **AI desktop assistant for macOS**. It lives as a small floating glass pill at the top-centre of your screen and responds to your voice or typed commands. You speak to it naturally — *"open my emails"*, *"search for the best AirPods deal"*, *"write a reply to my last message"* — and it does the work on your Mac.
 
 ### What can it do?
 
@@ -51,39 +51,39 @@ Moonwalk is an **AI desktop assistant for macOS**. It lives as a small floating 
 
 ### How does it hear me?
 
-Moonwalk listens for the wake word **"Hey Moonwalk"** at all times using low-power on-device processing (Picovoice). When it hears you, the pill expands and shows your speech being transcribed in real-time. Alternatively, press a keyboard shortcut at any time.
+CIARA listens for the wake word **"Hey CIARA"** at all times using low-power on-device processing (Picovoice). When it hears you, the pill expands and shows your speech being transcribed in real-time. Alternatively, press a keyboard shortcut at any time.
 
 ---
 
-## 2. Installing Moonwalk
+## 2. Installing CIARA
 
 ### Step 1 — Download
-You will receive a link to a file named `Moonwalk-x.x.x-universal.dmg`. Download it and double-click the `.dmg` file to open it.
+You will receive a link to a file named `CIARA-x.x.x-universal.dmg`. Download it and double-click the `.dmg` file to open it.
 
 ### Step 2 — Install to Applications
-A window opens showing the Moonwalk icon and an **Applications** folder shortcut. **Drag the Moonwalk icon into the Applications folder.** Close the window and eject the disk image (drag to Trash or right-click → Eject).
+A window opens showing the CIARA icon and an **Applications** folder shortcut. **Drag the CIARA icon into the Applications folder.** Close the window and eject the disk image (drag to Trash or right-click → Eject).
 
-### Step 3 — Open Moonwalk
-Open your **Applications** folder and double-click **Moonwalk**.
+### Step 3 — Open CIARA
+Open your **Applications** folder and double-click **CIARA**.
 
 > ⚠️ **Gatekeeper warning (first time only):** macOS may say it *"cannot be opened because the developer cannot be verified."*
 >
-> **Fix:** Right-click the Moonwalk icon → **Open** → **Open** in the dialog. You only need to do this once.
+> **Fix:** Right-click the CIARA icon → **Open** → **Open** in the dialog. You only need to do this once.
 
 ### Step 4 — First-Launch Onboarding (~60 seconds)
 
-The first time Moonwalk opens it shows a 3-step setup wizard:
+The first time CIARA opens it shows a 3-step setup wizard:
 
 **Step 1 — Enter your API key**
 - You need a free **Gemini API key** from Google AI Studio
 - Click the blue link in the wizard to open [aistudio.google.com](https://aistudio.google.com/app/apikey) — no credit card, free tier is plenty
 - Paste the key into the first field and click **Save & Continue**
-- Optionally add a **Picovoice access key** (free at [console.picovoice.ai](https://console.picovoice.ai)) to enable the "Hey Moonwalk" wake word
+- Optionally add a **Picovoice access key** (free at [console.picovoice.ai](https://console.picovoice.ai)) to enable the "Hey CIARA" wake word
 
 > ⚠️ **Without a Picovoice key the wake word is disabled.** Use `⌘⇧Space` instead — it works identically and requires no extra account.
 
 **Step 2 — Automatic setup (~60 seconds first time)**
-Moonwalk installs its Python environment automatically. You'll see three items go green:
+CIARA installs its Python environment automatically. You'll see three items go green:
 - ✅ Python environment (installs dependencies, ~60s the first time)
 - ✅ WebSocket connection
 - ✅ Microphone access
@@ -95,32 +95,32 @@ Shows keyboard shortcuts and buttons to install the Chrome browser extension.
 
 ### Step 5 — Grant Accessibility Permission
 
-For Moonwalk to control your Mac (clicking buttons, typing in apps, reading your screen), it needs Accessibility access:
+For CIARA to control your Mac (clicking buttons, typing in apps, reading your screen), it needs Accessibility access:
 
 1. Open **System Settings** → **Privacy & Security** → **Accessibility**
-2. Find **Moonwalk** in the list
+2. Find **CIARA** in the list
 3. Toggle it **ON**
 4. Enter your Mac password if prompted
 
-> Without this, Moonwalk can still answer questions and do web research, but cannot click or type in other apps.
+> Without this, CIARA can still answer questions and do web research, but cannot click or type in other apps.
 
 ---
 
 ## 3. Installing the Chrome Extension
 
-The Chrome extension lets Moonwalk browse the web, read page content, fill forms, and extract information from websites. It is optional but strongly recommended.
+The Chrome extension lets CIARA browse the web, read page content, fill forms, and extract information from websites. It is optional but strongly recommended.
 
-### Option A — From the Moonwalk Setup Wizard (easiest)
+### Option A — From the CIARA Setup Wizard (easiest)
 
 During first launch, the setup wizard's second screen shows:
 
-- **📥 Save Extension to Downloads** — click this. Moonwalk saves the extension folder to your Downloads and opens it in Finder automatically.
+- **📥 Save Extension to Downloads** — click this. CIARA saves the extension folder to your Downloads and opens it in Finder automatically.
 
 Then continue to **Step 3** below.
 
 ### Option B — From the Download Page
 
-Download the `moonwalk-browser-bridge.zip` from your download page, then unzip it by double-clicking.
+Download the `ciara-browser-bridge.zip` from your download page, then unzip it by double-clicking.
 
 ---
 
@@ -132,21 +132,21 @@ After getting the extension folder by either method:
 2. In the address bar type `chrome://extensions` and press **Enter**
 3. Turn on **Developer mode** — toggle in the **top-right corner**
 4. Click **"Load unpacked"** (appears top-left once Developer mode is on)
-5. In the file picker, navigate to and **select the `moonwalk-browser-bridge` folder**
-6. The **Moonwalk Browser Bridge** extension appears in your list ✓
+5. In the file picker, navigate to and **select the `ciara-browser-bridge` folder**
+6. The **CIARA Browser Bridge** extension appears in your list ✓
 
 ### Pin the Extension (recommended)
 
 1. Click the puzzle piece icon 🧩 in Chrome's toolbar
-2. Click the pin 📌 next to **Moonwalk Browser Bridge**
+2. Click the pin 📌 next to **CIARA Browser Bridge**
 
-The badge turns **green** when connected to the Moonwalk desktop app.
+The badge turns **green** when connected to the CIARA desktop app.
 
 > **"Developer mode" banner:** Chrome shows a warning banner at the top. You can dismiss it. It reappears occasionally — this is a Chrome limitation for extensions loaded outside the Web Store. It is safe to ignore.
 
 ---
 
-## 4. Using Moonwalk (Daily Use)
+## 4. Using CIARA (Daily Use)
 
 ### Keyboard Shortcuts
 
@@ -158,7 +158,7 @@ The badge turns **green** when connected to the Moonwalk desktop app.
 
 ### Voice Commands
 
-Press `⌘ Shift Space` (or say *"Hey Moonwalk"* if the wake word is active) and speak naturally:
+Press `⌘ Shift Space` (or say *"Hey CIARA"* if the wake word is active) and speak naturally:
 
 ```
 "Open Spotify"
@@ -179,7 +179,7 @@ Press `⌥ Space` to open a floating text box. Type your command and press **Ent
 
 ### Response Cards
 
-After completing a task, Moonwalk shows a **response card** which can contain:
+After completing a task, CIARA shows a **response card** which can contain:
 - Plain text summaries
 - Formatted tables and lists
 - Math equations (rendered with KaTeX)
@@ -190,7 +190,7 @@ Press `Esc` or click outside the card to dismiss it.
 
 ### Plan Preview
 
-For complex multi-step tasks, Moonwalk shows a **plan modal** first — a numbered list of what it intends to do. You can:
+For complex multi-step tasks, CIARA shows a **plan modal** first — a numbered list of what it intends to do. You can:
 - Click **Proceed** to execute the plan
 - Click **Cancel** to abort
 
@@ -198,29 +198,29 @@ For complex multi-step tasks, Moonwalk shows a **plan modal** first — a number
 
 ## 5. Starting & Stopping the App
 
-### Starting Moonwalk
+### Starting CIARA
 
-- Open **Moonwalk** from your Applications folder
-- Or click the Moonwalk icon in your Dock (if pinned)
+- Open **CIARA** from your Applications folder
+- Or click the CIARA icon in your Dock (if pinned)
 
 The glass pill appears at the top-centre of your screen within 2–3 seconds. On the very first launch, allow ~60 seconds for the Python setup.
 
-### Stopping / Quitting Moonwalk
+### Stopping / Quitting CIARA
 
-Moonwalk is an overlay with no traditional window or menu bar. To quit:
+CIARA is an overlay with no traditional window or menu bar. To quit:
 
 | Method | How |
 |--------|-----|
-| Dock | Right-click the Moonwalk dock icon → **Quit** |
-| Keyboard | Press `⌘ Q` while Moonwalk is the active app |
-| Force quit | Press `⌘ Option Esc` → select Moonwalk → Force Quit |
-| Activity Monitor | Open Activity Monitor, search for "Moonwalk" or "Python", force quit both |
+| Dock | Right-click the CIARA dock icon → **Quit** |
+| Keyboard | Press `⌘ Q` while CIARA is the active app |
+| Force quit | Press `⌘ Option Esc` → select CIARA → Force Quit |
+| Activity Monitor | Open Activity Monitor, search for "CIARA" or "Python", force quit both |
 
 When the Electron window quits, the Python backend process (running on port 8000) is automatically stopped with it.
 
 ### Restarting
 
-Simply open Moonwalk again. It reconnects to any existing session and resumes conversation history from where you left off (up to 30 minutes of idle time before history clears).
+Simply open CIARA again. It reconnects to any existing session and resumes conversation history from where you left off (up to 30 minutes of idle time before history clears).
 
 ---
 
@@ -228,16 +228,16 @@ Simply open Moonwalk again. It reconnects to any existing session and resumes co
 
 | Problem | Solution |
 |---------|----------|
-| Glass pill doesn't appear | Check Activity Monitor — Moonwalk may be on another workspace. Try pressing `⌘ Shift Space`. |
-| "Hey Moonwalk" not responding | Wake word requires a Picovoice key. Use `⌘⇧Space` instead, or add the key on first launch / in `backend/.env` (dev) |
-| Want to change the API key | Delete `~/Library/Application Support/moonwalk/credentials.enc` and relaunch |
+| Glass pill doesn't appear | Check Activity Monitor — CIARA may be on another workspace. Try pressing `⌘ Shift Space`. |
+| "Hey CIARA" not responding | Wake word requires a Picovoice key. Use `⌘⇧Space` instead, or add the key on first launch / in `backend/.env` (dev) |
+| Want to change the API key | Delete `~/Library/Application Support/ciara/credentials.enc` and relaunch |
 | App says "Backend not ready" | Wait 60 seconds on first launch. If it persists: quit and reopen. |
 | "Cannot be opened" security error | Right-click the app → Open → Open. One-time only. |
-| Chrome extension shows red badge | Make sure the Moonwalk app is running first, then click the extension badge to reconnect |
-| Accessibility actions don't work | **System Settings → Privacy & Security → Accessibility** — toggle Moonwalk ON |
+| Chrome extension shows red badge | Make sure the CIARA app is running first, then click the extension badge to reconnect |
+| Accessibility actions don't work | **System Settings → Privacy & Security → Accessibility** — toggle CIARA ON |
 | Slow to respond on complex tasks | Normal — the AI is planning and executing multiple steps. Simple tasks (open app, volume) respond in under 2 seconds. |
 | No spoken voice response | TTS requires Google Cloud credentials. Responses still appear as text cards. |
-| `xattr` error on startup | Run: `xattr -cr /Applications/Moonwalk.app` in Terminal, then reopen |
+| `xattr` error on startup | Run: `xattr -cr /Applications/CIARA.app` in Terminal, then reopen |
 
 ---
 
@@ -261,8 +261,8 @@ Simply open Moonwalk again. It reconnects to any existing session and resumes co
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/<your-org>/Moonwalk.git
-cd Moonwalk
+git clone https://github.com/<your-org>/CIARA.git
+cd CIARA
 
 # 2. Install Node dependencies
 npm install
@@ -296,7 +296,7 @@ Browser bridge running on ws://127.0.0.1:8765
 [Backend] READY
 [Python] Electron App Connected!
 [Python] [Server] Agent initialized: V2
-[Python] Porcupine initialized with CUSTOM wake word: 'Hey Moonwalk'
+[Python] Porcupine initialized with CUSTOM wake word: 'Hey CIARA'
 ```
 
 ### Stopping the App
@@ -342,7 +342,7 @@ cp backend/.env.example backend/.env
 
 | Variable | Description | Where to get it |
 |----------|-------------|-----------------|
-| `PICOVOICE_ACCESS_KEY` | Wake word detection ("Hey Moonwalk"). **Without this the wake word is fully disabled** — use `⌘⇧Space` instead. | [console.picovoice.ai](https://console.picovoice.ai) — free tier available |
+| `PICOVOICE_ACCESS_KEY` | Wake word detection ("Hey CIARA"). **Without this the wake word is fully disabled** — use `⌘⇧Space` instead. | [console.picovoice.ai](https://console.picovoice.ai) — free tier available |
 
 ### Optional — Model Overrides
 
@@ -357,34 +357,34 @@ cp backend/.env.example backend/.env
 
 | Variable | Description |
 |----------|-------------|
-| `MOONWALK_DATA_DIR` | Root folder for sessions, vault, screenshots, plans, milestones, memories (Electron sets this under app userData by default) |
-| `MOONWALK_DISABLE_LOCAL_VAULT_RAG` | Set to `1` to skip TF-IDF vault recall prefix on agent prompts |
+| `CIARA_DATA_DIR` | Root folder for sessions, vault, screenshots, plans, milestones, memories (Electron sets this under app userData by default) |
+| `CIARA_DISABLE_LOCAL_VAULT_RAG` | Set to `1` to skip TF-IDF vault recall prefix on agent prompts |
 
 ### Optional — Voice / TTS
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MOONWALK_TTS_VOICE` | `en-US-Neural2-J` | Google Cloud TTS Neural2 voice |
-| `MOONWALK_TTS_SPEED` | `1.05` | Speaking rate (1.0 = normal speed) |
+| `CIARA_TTS_VOICE` | `en-US-Neural2-J` | Google Cloud TTS Neural2 voice |
+| `CIARA_TTS_SPEED` | `1.05` | Speaking rate (1.0 = normal speed) |
 
 ### Optional — Ports
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MOONWALK_BACKEND_PORT` | `8000` | Main Python WebSocket server port |
-| `MOONWALK_BROWSER_BRIDGE_PORT` | `8765` | Chrome extension bridge port |
+| `CIARA_BACKEND_PORT` | `8000` | Main Python WebSocket server port |
+| `CIARA_BROWSER_BRIDGE_PORT` | `8765` | Chrome extension bridge port |
 
 ---
 
 ## 9. Project Structure
 
 ```
-Moonwalk/
+CIARA/
 ├── main.js                      # Electron main process — window, IPC, Python lifecycle
 ├── preload.js                   # contextBridge IPC (auth, credentials, extension export)
 ├── package.json                 # npm scripts, electron-builder config
 ├── setup.sh                     # Auto-runs on first launch: creates venv, installs deps
-├── hey_moonwalk.ppn             # Picovoice custom wake word model ("Hey Moonwalk")
+├── hey_ciara.ppn             # Picovoice custom wake word model ("Hey CIARA")
 │
 ├── renderer/
 │   ├── index.html               # Glass-pill overlay markup + all modal scaffolding
@@ -440,7 +440,7 @@ Moonwalk/
 │   │   └── tts.py               # Streamed Google Cloud TTS (Neural2, OGG/Opus)
 │   │
 │   ├── runtime_state.py         # Shared cancel flag / runtime store
-│   ├── runtime_paths.py         # MOONWALK_DATA_DIR folder layout
+│   ├── runtime_paths.py         # CIARA_DATA_DIR folder layout
 │   └── requirements.txt         # Python dependencies
 │
 ├── chrome_extension/
@@ -463,9 +463,9 @@ Moonwalk/
 
 ---
 
-## 10. How Moonwalk Works (Architecture)
+## 10. How CIARA Works (Architecture)
 
-Moonwalk is split into three layers that communicate over WebSockets:
+CIARA is split into three layers that communicate over WebSockets:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -492,7 +492,7 @@ Moonwalk is split into three layers that communicate over WebSockets:
 ### Complete Data Flow — a voice command end-to-end
 
 ```
-User: "Hey Moonwalk, search Amazon for AirPods"
+User: "Hey CIARA, search Amazon for AirPods"
          │
          ▼
 Electron renderer.js
@@ -501,12 +501,12 @@ Electron renderer.js
          │
          ▼
 Python local_server.py
-  → pvporcupine detects wake word "Hey Moonwalk" in audio stream
+  → pvporcupine detects wake word "Hey CIARA" in audio stream
   → SpeechRecognition + Google STT transcribes the rest
   → Sends {type: "transcription", text: "search Amazon for AirPods"}
          │
          ▼
-MoonwalkAgentV2 (core_v2.py)
+CiaraAgentV2 (core_v2.py)
   → L1 Perception: active app + window title via AppleScript (~50ms)
   → L2 Perception: DOM snapshot from Chrome extension (~200ms)
   → Router classifies: POWERFUL model (multi-step browser task)
@@ -623,7 +623,7 @@ Only ~5–10% of requests ever go to FAST. The router is deliberately biased tow
 
 ## 12. Google APIs & Local Data
 
-Moonwalk still calls **Google APIs** for intelligence and voice, but **sessions, vault, screenshots, plans, and milestones are stored on disk** under `MOONWALK_DATA_DIR`.
+CIARA still calls **Google APIs** for intelligence and voice, but **sessions, vault, screenshots, plans, and milestones are stored on disk** under `CIARA_DATA_DIR`.
 
 ### 1. Gemini API — the AI brain
 
@@ -648,7 +648,7 @@ Spoken responses use **Google Neural2** voices via `google-cloud-texttospeech` S
 
 ### 3. Local persistence & vault recall
 
-The desktop server keeps durable state in folders such as `sessions/`, `vault/`, `screenshots/`, `plans/`, `milestones/`, and `memories/` (see `backend/runtime_paths.py`). Optional **TF-IDF vault recall** prefixes agent prompts with relevant vault snippets (`backend/servers/local_augment.py`, formatted via `backend/agent/rag.py`). Set `MOONWALK_DISABLE_LOCAL_VAULT_RAG=1` to turn that off.
+The desktop server keeps durable state in folders such as `sessions/`, `vault/`, `screenshots/`, `plans/`, `milestones/`, and `memories/` (see `backend/runtime_paths.py`). Optional **TF-IDF vault recall** prefixes agent prompts with relevant vault snippets (`backend/servers/local_augment.py`, formatted via `backend/agent/rag.py`). Set `CIARA_DISABLE_LOCAL_VAULT_RAG=1` to turn that off.
 
 ### Infrastructure Summary
 
@@ -658,7 +658,7 @@ Your Mac
   └── local_server.py (Python WebSocket backend)
           ├── Gemini API ─────────────────────► Google AI Studio
           ├── Google Cloud TTS ───────────────► Neural2 voice synthesis
-          └── Disk-backed memory / vault ─────► MOONWALK_DATA_DIR
+          └── Disk-backed memory / vault ─────► CIARA_DATA_DIR
 ```
 
 ---
@@ -674,10 +674,10 @@ Your Mac
 | Backend | **Python 3.13 + asyncio + websockets** | Picovoice SDK is Python-only; `pyobjc` is the gold standard for macOS Accessibility API; `asyncio` gives clean concurrent I/O |
 | AI provider | **Google Gemini** | Native function calling; multimodal; same credentials for TTS + embeddings + cloud; fastest Flash model for routing |
 | macOS control | **AppleScript + pyobjc (Quartz/AppKit)** | AppleScript covers 90% of app control; Quartz Accessibility API handles the rest (system controls, fine-grained UI) |
-| Wake word | **Picovoice Porcupine** | On-device, low-power, custom wake word ("Hey Moonwalk"); no audio leaves the Mac for detection |
+| Wake word | **Picovoice Porcupine** | On-device, low-power, custom wake word ("Hey CIARA"); no audio leaves the Mac for detection |
 | Voice output | **Google Cloud TTS Neural2** | Natural prosody; concurrent sentence synthesis for streaming feel; OGG/Opus output plays natively in Chromium |
 | Browser bridge | **Chrome Extension MV3** | Bridges the real browser the user has open (with all their logged-in state and cookies) rather than a headless browser |
-| Persistence | **Local disk (`MOONWALK_DATA_DIR`)** | Sessions, vault JSON, screenshots, plans/milestones — no hosted database in this tree |
+| Persistence | **Local disk (`CIARA_DATA_DIR`)** | Sessions, vault JSON, screenshots, plans/milestones — no hosted database in this tree |
 | Vault recall | **TF-IDF + `rag.format_vault_results_for_prompt`** | Lightweight recall for desktop prompts; optional Gemini embeddings remain available in `rag.py` for advanced use |
 | Distribution | **electron-builder** | Universal binary (ARM + Intel); notarization hook; ship DMG + extension zip from `dist/` |
 
@@ -694,20 +694,20 @@ A step plan tells the LLM exactly which tool calls to make. A milestone plan tel
 - The LLM isn't over-constrained — it has full autonomy within each milestone scope
 
 **Why a separate Chrome extension instead of Electron's browser?**
-Moonwalk is a desktop overlay, not a browser. The Chrome extension bridges the real browser the user already has open, complete with their logged-in sessions, cookies, and browser history. This means web automation works on any site, including banking and internal tools.
+CIARA is a desktop overlay, not a browser. The Chrome extension bridges the real browser the user already has open, complete with their logged-in sessions, cookies, and browser history. This means web automation works on any site, including banking and internal tools.
 
 **Why keep the whole agent on the Mac?**
 macOS-specific APIs (AppleScript, Quartz Accessibility, Picovoice) already require local execution. Running `local_server.py` keeps latency low, avoids shipping a multi-tenant cloud backend, and stores memory entirely under the user’s data directory.
 
 **Memory architecture — four tiers**
-Moonwalk mirrors how humans actually remember things:
+CIARA mirrors how humans actually remember things:
 
 | Tier | Implementation | Scope | Persistence |
 |------|---------------|-------|-------------|
 | Working memory | In-process Python dict | Current task, action log, entities | Until task ends |
 | Short-term | `ConversationMemory` (20 turns) | Recent conversation | 30 min idle timeout |
 | Long-term | `UserProfile` (auto-extracted facts) | Who you are, what you like | Permanent |
-| Vault | `VaultMemory` (explicit storage) | Things you told Moonwalk to remember | Permanent, semantic search |
+| Vault | `VaultMemory` (explicit storage) | Things you told CIARA to remember | Permanent, semantic search |
 
 **How the Chrome extension element referencing works**
 The content script assigns a stable `ref` ID to every interactive element on every page. These IDs are based on element position, tag, role, and text content — they survive re-renders if the element itself doesn't change. The agent uses these refs to click or type into elements reliably (e.g. `browser_click_ref(ref="btn_submit_1")`) rather than fragile CSS selectors or XPath.
@@ -742,10 +742,10 @@ Then add to `package.json` → `build.mac`:
 # Universal DMG (Apple Silicon + Intel in one file)
 npm run build:signed
 
-# Output: dist/Moonwalk-1.0.0-universal.dmg
+# Output: dist/CIARA-1.0.0-universal.dmg
 ```
 
-The DMG bundles: Electron runtime, all renderer files, the `backend/` folder, `hey_moonwalk.ppn`, `chrome_extension/`, and `setup.sh` (runs automatically on first launch to create the Python venv).
+The DMG bundles: Electron runtime, all renderer files, the `backend/` folder, `hey_ciara.ppn`, `chrome_extension/`, and `setup.sh` (runs automatically on first launch to create the Python venv).
 
 ---
 
@@ -795,8 +795,8 @@ Leave the env vars unset. The build still produces a working unsigned DMG. Custo
 ```
 
 This pipeline:
-1. **Packages the Chrome extension** → `dist/moonwalk-browser-bridge.zip` (with an `INSTALL.md` guide inside for customers)
-2. **Builds the signed + notarized DMG** (when signing env vars are set) → `dist/Moonwalk-x.x.x-universal.dmg`
+1. **Packages the Chrome extension** → `dist/ciara-browser-bridge.zip` (with an `INSTALL.md` guide inside for customers)
+2. **Builds the signed + notarized DMG** (when signing env vars are set) → `dist/CIARA-x.x.x-universal.dmg`
 
 Artifacts remain in `dist/`. Host them however you prefer (email, internal drive, your own CDN). This repository does **not** include `upload-gcs.mjs` or a Cloud Run deploy script.
 
@@ -805,11 +805,11 @@ Artifacts remain in `dist/`. Host them however you prefer (email, internal drive
 ```bash
 # 1. Package extension
 npm run dist:extension
-# → dist/moonwalk-browser-bridge.zip
+# → dist/ciara-browser-bridge.zip
 
 # 2. Build DMG
 npm run build:signed
-# → dist/Moonwalk-1.0.0-universal.dmg (version from package.json)
+# → dist/CIARA-1.0.0-universal.dmg (version from package.json)
 ```
 
 ### Share with customers

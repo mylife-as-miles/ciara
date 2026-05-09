@@ -1,5 +1,5 @@
 """
-Moonwalk — Tool Registry
+CIARA — Tool Registry
 =========================
 Decorated Python functions that the LLM can invoke by name.
 Each tool auto-registers into the global registry and exports

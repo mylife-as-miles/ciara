@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-//  Moonwalk — Content Script
+//  CIARA — Content Script
 //  Captures interactive DOM elements and executes browser actions.
 // ═══════════════════════════════════════════════════════════════
 
@@ -465,11 +465,11 @@ async function sendSnapshot(sessionId, tabId) {
   const snapshot = buildSnapshot(sessionId, tabId);
   try {
     await chrome.runtime.sendMessage({
-      type: "moonwalk_snapshot",
+      type: "ciara_snapshot",
       snapshot,
     });
   } catch (error) {
-    console.debug("[Moonwalk Content] Snapshot send failed", error);
+    console.debug("[CIARA Content] Snapshot send failed", error);
   }
 }
 
@@ -532,7 +532,7 @@ function startMutationObserver(sessionId, tabId) {
 // ── Message Handling ──
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "moonwalk_collect_snapshot") {
+  if (message?.type === "ciara_collect_snapshot") {
     const sid = message.sessionId || _observerSessionId;
     const tid = message.tabId || _observerTabId;
     _observerSessionId = sid;
@@ -543,7 +543,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse?.({ ok: true });
     return true;
   }
-  if (message?.type === "moonwalk_execute_action") {
+  if (message?.type === "ciara_execute_action") {
     executeAction(message.action, message.sessionId, message.tabId)
       .then((result) => sendResponse?.(result))
       .catch((error) =>

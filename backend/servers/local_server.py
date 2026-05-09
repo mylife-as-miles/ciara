@@ -1,5 +1,5 @@
 """
-Moonwalk — Backend Server (Agentic)
+CIARA — Backend Server (Agentic)
 =====================================
 WebSocket server that:
   1. Receives audio from Electron → detects wake word → transcribes speech
@@ -33,10 +33,10 @@ if _backend_dir not in sys.path:
 
 load_dotenv(os.path.join(_backend_dir, ".env"))
 
-from runtime_paths import ensure_moonwalk_data_layout
+from runtime_paths import ensure_ciara_data_layout
 
-_data_root = ensure_moonwalk_data_layout()
-print(f"[Local] Moonwalk local data directory: {_data_root}")
+_data_root = ensure_ciara_data_layout()
+print(f"[Local] CIARA local data directory: {_data_root}")
 
 # Voice libraries (soft import — server still starts if missing, wake word is just disabled)
 try:
@@ -46,7 +46,7 @@ except ImportError:
     print("[Voice] pvporcupine not installed — wake word will be disabled")
 import speech_recognition as sr
 
-# Moonwalk Agent (V2 runtime)
+# CIARA Agent (V2 runtime)
 from agent import create_agent
 import agent.perception as perception
 from runtime_state import runtime_state_store
@@ -58,7 +58,7 @@ from browser.selector_ai import build_ranked_candidates, select_browser_candidat
 from servers.local_augment import build_agent_user_message_with_vault
 
 # Agent version toggle (deprecated compatibility env; V2 is always used)
-AGENT_VERSION = os.environ.get("MOONWALK_AGENT_VERSION", "v2")
+AGENT_VERSION = os.environ.get("CIARA_AGENT_VERSION", "v2")
 
 # Picovoice access key (loaded from .env)
 PICOVOICE_ACCESS_KEY = os.environ.get("PICOVOICE_ACCESS_KEY", "")
@@ -94,9 +94,9 @@ class VoiceAssistant:
             else:
                 # Look for the .ppn file in the project root (one level above _backend_dir)
                 project_root = os.path.abspath(os.path.join(_backend_dir, ".."))
-                custom_ppn = os.path.join(project_root, "hey_moonwalk.ppn")
+                custom_ppn = os.path.join(project_root, "hey_ciara.ppn")
                 # Also check inside the servers directory (bundled copy)
-                servers_ppn = os.path.join(os.path.dirname(__file__), "hey_moonwalk.ppn")
+                servers_ppn = os.path.join(os.path.dirname(__file__), "hey_ciara.ppn")
                 ppn_path = custom_ppn if os.path.exists(custom_ppn) else (servers_ppn if os.path.exists(servers_ppn) else None)
 
                 print(f"[Voice] Picovoice key: {PICOVOICE_ACCESS_KEY[:12]}… (len={len(PICOVOICE_ACCESS_KEY)})")
@@ -108,13 +108,13 @@ class VoiceAssistant:
                         access_key=PICOVOICE_ACCESS_KEY,
                         keyword_paths=[ppn_path]
                     )
-                    print(f"[Voice] ✓ Porcupine initialized with 'Hey Moonwalk' from {ppn_path}")
+                    print(f"[Voice] ✓ Porcupine initialized with 'Hey CIARA' from {ppn_path}")
                 else:
                     self.porcupine = pvporcupine.create(
                         access_key=PICOVOICE_ACCESS_KEY,
                         keywords=["porcupine"]
                     )
-                    print("[Voice] ⚠ hey_moonwalk.ppn not found — using built-in 'Porcupine' keyword")
+                    print("[Voice] ⚠ hey_ciara.ppn not found — using built-in 'Porcupine' keyword")
                     print(f"[Voice]   Searched: {custom_ppn}")
                     print(f"[Voice]   Searched: {servers_ppn}")
         except Exception as e:

@@ -9,13 +9,13 @@ from typing import Any
 
 def build_agent_user_message_with_vault(agent: Any, user_text: str, *, max_hits: int = 5) -> str:
     """
-    Prepend vault recall as formatted context before ``MoonwalkAgentV2.run``.
+    Prepend vault recall as formatted context before ``CiaraAgentV2.run``.
 
-    Set MOONWALK_DISABLE_LOCAL_VAULT_RAG=1 to skip.
+    Set CIARA_DISABLE_LOCAL_VAULT_RAG=1 to skip.
     """
     import os
 
-    if os.environ.get("MOONWALK_DISABLE_LOCAL_VAULT_RAG", "").strip().lower() in (
+    if os.environ.get("CIARA_DISABLE_LOCAL_VAULT_RAG", "").strip().lower() in (
         "1", "true", "yes",
     ):
         return user_text

@@ -65,7 +65,7 @@
   <rect width="1100" height="920" rx="20" fill="#f5f5f7"/>
 
   <!-- Title -->
-  <text x="550" y="46" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f" letter-spacing="-0.02em">Moonwalk · Agent Pipeline (SPAV Loop)</text>
+  <text x="550" y="46" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f" letter-spacing="-0.02em">CIARA · Agent Pipeline (SPAV Loop)</text>
   <text x="550" y="70" text-anchor="middle" font-size="13" fill="#6e6e73">Sense → Route → Plan → Act → Verify</text>
 
   <!-- ═══════════════════════════════════════════ -->
@@ -276,5 +276,5 @@
     <text x="348" y="20" font-size="9" fill="#6e6e73">Internal link</text>
   </g>
 
-  <text x="1040" y="905" text-anchor="end" font-size="9" fill="#aeaeb2">Moonwalk v1.0.0</text>
+  <text x="1040" y="905" text-anchor="end" font-size="9" fill="#aeaeb2">CIARA v1.0.0</text>
 </svg>

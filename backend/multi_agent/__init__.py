@@ -1,5 +1,5 @@
 """
-Moonwalk — Multi-Agent Orchestration
+CIARA — Multi-Agent Orchestration
 ======================================
 Types and protocols for parallel sub-agent execution.
 

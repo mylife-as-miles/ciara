@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
-#  Moonwalk — Package extension & build macOS DMG (artifacts in dist/)
+#  CIARA — Package extension & build macOS DMG (artifacts in dist/)
 # ═══════════════════════════════════════════════════════════════
 #
 #  One-command release pipeline:
@@ -30,9 +30,9 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-info()    { echo -e "${GREEN}[Moonwalk]${NC} $1"; }
-warn()    { echo -e "${YELLOW}[Moonwalk]${NC} $1"; }
-fail()    { echo -e "${RED}[Moonwalk]${NC} $1"; exit 1; }
+info()    { echo -e "${GREEN}[CIARA]${NC} $1"; }
+warn()    { echo -e "${YELLOW}[CIARA]${NC} $1"; }
+fail()    { echo -e "${RED}[CIARA]${NC} $1"; exit 1; }
 banner()  { echo -e "\n${CYAN}═══════════════════════════════════════════════${NC}\n${BOLD}  $1${NC}\n${CYAN}═══════════════════════════════════════════════${NC}"; }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -41,7 +41,7 @@ cd "$PROJECT_ROOT"
 
 VERSION=$(node -e "console.log(require('./package.json').version)")
 
-banner "Moonwalk Release v${VERSION}"
+banner "CIARA Release v${VERSION}"
 
 # ── Pre-flight Checks ──
 

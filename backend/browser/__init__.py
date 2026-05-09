@@ -1,5 +1,5 @@
 """
-Moonwalk browser automation contract layer.
+CIARA browser automation contract layer.
 
 This package owns stable browser element identities, snapshot state,
 candidate resolution, and extension bridge state.

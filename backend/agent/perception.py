@@ -1,5 +1,5 @@
 """
-Moonwalk — 3-Layer Perception Engine
+CIARA — 3-Layer Perception Engine
 =====================================
 L1: AppleScript  → active app, window title, browser URL (always, ~50ms)
 L2: Browser DOM  → page content, selected text (when browser is active)
@@ -172,14 +172,14 @@ async def get_browser_page_content(app_name: str) -> Optional[str]:
 #  Layer 3 — Vision (screenshot for Gemini multimodal)
 # ═══════════════════════════════════════════════════════════════
 
-SCREENSHOT_DIR_LEGACY = os.path.join(tempfile.gettempdir(), "moonwalk")
+SCREENSHOT_DIR_LEGACY = os.path.join(tempfile.gettempdir(), "ciara")
 
 
 def _screenshot_capture_dir() -> str:
     try:
-        from runtime_paths import ensure_moonwalk_data_layout, get_screenshots_dir
+        from runtime_paths import ensure_ciara_data_layout, get_screenshots_dir
 
-        ensure_moonwalk_data_layout()
+        ensure_ciara_data_layout()
         return get_screenshots_dir()
     except Exception:
         return SCREENSHOT_DIR_LEGACY

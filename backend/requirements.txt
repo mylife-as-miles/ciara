@@ -1,4 +1,4 @@
-# Moonwalk — Local macOS Backend Dependencies
+# CIARA — Local macOS Backend Dependencies
 # Install with: pip install -r requirements.txt
 # (setup.sh handles this automatically)
 

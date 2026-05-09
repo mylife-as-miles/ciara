@@ -1,5 +1,5 @@
 """
-Moonwalk — Speech-to-text (Google Web Speech vs ElevenLabs Scribe).
+CIARA — Speech-to-text (Google Web Speech vs ElevenLabs Scribe).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ ELEVENLABS_STT_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 
 def stt_backend() -> str:
     """Prefer ElevenLabs Scribe when a key exists unless explicitly overridden."""
-    explicit = os.environ.get("MOONWALK_STT_PROVIDER", "").strip().lower()
+    explicit = os.environ.get("CIARA_STT_PROVIDER", "").strip().lower()
     if explicit in ("google", "elevenlabs"):
         return explicit
     if os.environ.get("ELEVENLABS_API_KEY", "").strip():
@@ -38,15 +38,15 @@ def _extract_scribe_text(payload: dict) -> str:
 
 
 async def _elevenlabs_scribe(wav_bytes: bytes, api_key: str) -> str:
-    model_id = (os.environ.get("MOONWALK_STT_MODEL_ID") or "scribe_v2").strip()
-    lang = (os.environ.get("MOONWALK_STT_LANGUAGE_CODE") or "").strip()
+    model_id = (os.environ.get("CIARA_STT_MODEL_ID") or "scribe_v2").strip()
+    lang = (os.environ.get("CIARA_STT_LANGUAGE_CODE") or "").strip()
 
     data = {"model_id": model_id, "tag_audio_events": "false"}
     if lang:
         data["language_code"] = lang
 
     headers = {"xi-api-key": api_key}
-    timeout = float(os.environ.get("MOONWALK_STT_TIMEOUT", "120") or 120)
+    timeout = float(os.environ.get("CIARA_STT_TIMEOUT", "120") or 120)
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(
@@ -70,7 +70,7 @@ async def transcribe_wav_bytes(wav_bytes: bytes, recognizer: sr.Recognizer) -> s
     if backend == "elevenlabs":
         key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
         if not key:
-            print("[STT] MOONWALK_STT_PROVIDER=elevenlabs but ELEVENLABS_API_KEY empty — using Google.")
+            print("[STT] CIARA_STT_PROVIDER=elevenlabs but ELEVENLABS_API_KEY empty — using Google.")
         else:
             try:
                 return await _elevenlabs_scribe(wav_bytes, key)
