@@ -69,7 +69,6 @@ nsis:
 
   license: build/license.txt
   include: build/ciara-nsis-macros.nsh
-  script: build/installer.nsi
 
   runAfterFinish: true
   deleteAppDataOnUninstall: false

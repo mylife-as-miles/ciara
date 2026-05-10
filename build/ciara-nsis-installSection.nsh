@@ -1,6 +1,6 @@
-; CIARA — fork of app-builder-lib/templates/nsis/installSection.nsh
-; Use SetDetailsPrint both + DetailPrint so the NSIS Installing page shows actionable status text.
-; (Default electron-builder upstream uses SetDetailsPrint none, hiding all activity.)
+; CIARA — replaces app-builder-lib/templates/nsis/installSection.nsh (via scripts/apply-nsis-installsection.mjs on postinstall).
+; Verbose install log: SetDetailsPrint both + DetailPrint steps.
+; Do not rename to installer.nsh (that name shadows include/installer.nsh in build/).
 
 !include installer.nsh
 
@@ -8,7 +8,7 @@ InitPluginsDir
 
 ${IfNot} ${Silent}
   SetDetailsPrint both
-  DetailPrint "Starting CIARA install—unpacking Electron app, Python backend, extension resources."
+  DetailPrint "Step 1 of 4: Preparing installer and enabling detailed progress log..."
   DetailPrint " "
 ${endif}
 
@@ -56,7 +56,7 @@ ${if} $isTryToKeepShortcuts == "true"
 ${endif}
 
 ${IfNot} ${Silent}
-  DetailPrint "Checking for any previous CIARA version and preparing install location…"
+  DetailPrint "Step 2 of 4: Pre-install - verify CIARA is not running; remove previous install if upgrading..."
 ${endif}
 
 !insertmacro uninstallOldVersion SHELL_CONTEXT
@@ -74,14 +74,15 @@ SetOutPath $INSTDIR
 !endif
 
 ${IfNot} ${Silent}
-  DetailPrint "Extracting application files to: $INSTDIR"
-  DetailPrint "(Archive unpack may take a minute—log lines below update as work completes.)"
+  DetailPrint "Step 3 of 4: Installing files - unpacking bundled CIARA into:"
+  DetailPrint "        $INSTDIR"
+  DetailPrint "        Large archive extraction may take a minute on slower disks."
 ${endif}
 
 !insertmacro installApplicationFiles
 
 ${IfNot} ${Silent}
-  DetailPrint "Registering installation and creating shortcuts…"
+  DetailPrint "Step 4 of 4: Finalizing - uninstall registry entries, shortcuts, and launch options..."
 ${endif}
 
 !insertmacro registryAddInstallInfo

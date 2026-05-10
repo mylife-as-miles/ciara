@@ -16,7 +16,7 @@
     "build:signed": "electron-builder --mac --universal",
     "release": "electron-builder --mac --universal --publish never",
     "dist:extension": "node scripts/package-extension.mjs",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps && node scripts/apply-nsis-installsection.mjs"
   },
   "dependencies": {
     "katex": "^0.16.37",
