@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="CIARA — Control Intelligence Assistant for Real-time Automation" />
-  <title>CIARA</title>
+  <title>CIARA — Control Intelligence Assistant for Real-time Automation</title>
   <link rel="stylesheet" href="../node_modules/katex/dist/katex.min.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -186,6 +186,11 @@
     <!-- ═══ Onboarding Modal (first-launch setup) ═══ -->
     <div class="onboarding-overlay hidden" id="onboarding-overlay">
       <div class="onboarding-card">
+        <div class="overlay-window-controls" role="toolbar" aria-label="Window controls">
+          <button type="button" class="overlay-window-btn overlay-minimize-btn" id="onboarding-minimize" aria-label="Minimize window">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+          </button>
+        </div>
         <div class="onboarding-header">
           <svg class="onboarding-logo" viewBox="0 0 40 40" width="44" height="44">
             <defs>
@@ -198,13 +203,14 @@
             <path d="M24 10a12 12 0 01-1.5 20.8A10 10 0 0024 10z" fill="url(#ob-grad)" opacity="0.85"/>
           </svg>
           <h2 class="onboarding-title">Welcome to CIARA</h2>
-          <p class="onboarding-subtitle">Your AI desktop assistant</p>
+          <p class="onboarding-expanded-name">Control Intelligence Assistant for Real-time Automation</p>
+          <p class="onboarding-subtitle onboarding-tagline">Your AI desktop assistant</p>
         </div>
 
         <!-- Step 1: API Key -->
         <div class="onboarding-step active" id="onboarding-step-1">
           <div class="onboarding-body">
-            <p>CIARA needs a <strong>Gemini API key</strong> to power its AI.<br/>Get one free at Google AI Studio — no credit card needed.</p>
+            <p>CIARA runs on Google's <strong>Gemma&nbsp;4</strong> models via the <strong>Gemini API</strong>.<br/>Get your key free at Google AI Studio — no credit card needed.</p>
             <div class="onboarding-apikey-box">
               <a href="#" id="onboarding-open-aistudio" class="onboarding-link">Get free key at aistudio.google.com →</a>
               <input type="password" id="onboarding-gemini-key" class="onboarding-input"
@@ -296,17 +302,23 @@
     <!-- ═══ Settings (API keys) ═══ -->
     <div class="settings-overlay hidden" id="settings-overlay">
       <div class="onboarding-card settings-card">
-        <button type="button" class="response-dismiss" id="settings-close" aria-label="Close settings">
-          <svg width="10" height="10" viewBox="0 0 10 10">
-            <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-          </svg>
-        </button>
+        <div class="overlay-window-controls" role="toolbar" aria-label="Window controls">
+          <button type="button" class="overlay-window-btn overlay-minimize-btn" id="settings-minimize" aria-label="Minimize window">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+          </button>
+          <button type="button" class="overlay-window-btn overlay-close-btn" id="settings-close" aria-label="Close settings">
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
         <div class="onboarding-header settings-card-header">
           <h2 class="onboarding-title">Settings</h2>
+          <p class="onboarding-expanded-name settings-expanded-name">Control Intelligence Assistant for Real-time Automation</p>
           <p class="onboarding-subtitle">API keys &amp; local data</p>
         </div>
         <div class="settings-form">
-          <p class="settings-hint"><strong>Gemini</strong> powers reasoning. Get a key at
+          <p class="settings-hint"><strong>Gemini&nbsp;API</strong> (Gemma&nbsp;4 reasoning) — get a key at
             <a href="#" id="settings-link-aistudio" class="onboarding-inline-link">Google AI Studio</a>.</p>
           <label class="settings-label" for="settings-gemini-key">Gemini API key</label>
           <input type="password" id="settings-gemini-key" class="onboarding-input" autocomplete="off" spellcheck="false" />

@@ -295,7 +295,9 @@ function createWindow() {
     movable: false,
     hasShadow: false,
     alwaysOnTop: true,
-    skipTaskbar: true,
+    /** Show on taskbar so the window can be minimized from the OS chrome / taskbar. */
+    skipTaskbar: false,
+    minimizable: true,
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -423,6 +425,11 @@ app.whenReady().then(async () => {
 
 ipcMain.handle("overlay:hide", () => {
   hideOverlay();
+});
+
+ipcMain.handle("window:minimize", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.minimize();
 });
 
 ipcMain.on("enable-mouse", () => {

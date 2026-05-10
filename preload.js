@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("overlayAPI", {
   hideWindow: () => ipcRenderer.invoke("overlay:hide"),
+  minimizeWindow: () => ipcRenderer.invoke("window:minimize"),
   enableMouse: () => ipcRenderer.send("enable-mouse"),
   disableMouse: () => ipcRenderer.send("disable-mouse"),
   onStartListening: (handler) => {

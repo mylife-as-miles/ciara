@@ -15,6 +15,7 @@ const WS_URL = "ws://127.0.0.1:8000/ws";
 /* ── IPC Bridge ── */
 const bridge = window.overlayAPI || {
   hideWindow: async () => { },
+  minimizeWindow: async () => { },
   enableMouse: () => { },
   disableMouse: () => { },
   onStartListening: () => () => { },
@@ -56,6 +57,8 @@ const pillStopBtn = document.getElementById("pill-stop");
 
 const settingsOverlay = document.getElementById("settings-overlay");
 const settingsClose = document.getElementById("settings-close");
+const settingsMinimize = document.getElementById("settings-minimize");
+const onboardingMinimize = document.getElementById("onboarding-minimize");
 const settingsLinkAistudio = document.getElementById("settings-link-aistudio");
 const settingsLinkPicovoice = document.getElementById("settings-link-picovoice");
 const settingsLinkEleven = document.getElementById("settings-link-eleven");
@@ -1589,6 +1592,9 @@ if (settingsLinkEleven) {
   });
 }
 if (settingsClose) settingsClose.addEventListener("click", () => closeSettings());
+if (settingsMinimize) settingsMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
+if (onboardingMinimize) onboardingMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
+if (onboardingMinimize) onboardingMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
 if (settingsCancel) settingsCancel.addEventListener("click", () => closeSettings());
 
 if (settingsSave) {
