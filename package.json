@@ -7,6 +7,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --mac",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win --x64 --publish never",
     "build:dmg": "electron-builder --mac dmg",
     "build:dir": "electron-builder --mac dir",
     "build:signed": "electron-builder --mac --universal",
@@ -50,10 +52,6 @@
         ]
       },
       {
-        "from": "hey_ciara.ppn",
-        "to": "hey_ciara.ppn"
-      },
-      {
         "from": "setup.sh",
         "to": "setup.sh"
       },
@@ -66,6 +64,23 @@
         ]
       }
     ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
