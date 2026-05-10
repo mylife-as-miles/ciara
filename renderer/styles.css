@@ -2192,3 +2192,145 @@ body {
   line-height: 1.5;
   transition: opacity 0.3s;
 }
+
+/* ══════════════════════════════════════════════════════
+   SETTINGS — same glass language as onboarding
+   ══════════════════════════════════════════════════════ */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 245, 247, 0.55);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  z-index: 10050;
+  pointer-events: auto;
+  animation: onboard-fade-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.settings-overlay.hidden {
+  display: none;
+}
+
+.settings-card {
+  position: relative;
+  width: 420px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: left;
+  padding-top: 32px;
+}
+
+.settings-card .response-dismiss {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+}
+
+.settings-card-header {
+  text-align: center;
+  padding-right: 28px;
+}
+
+.settings-form {
+  margin-top: 4px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8e8e93;
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.settings-label:first-of-type {
+  margin-top: 0;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: #48484a;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+
+.settings-hint.subtle {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #8e8e93;
+}
+
+.settings-meta {
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  align-items: baseline;
+}
+
+.settings-meta-label {
+  font-size: 11px;
+  color: #8e8e93;
+}
+
+.settings-meta-value {
+  font-size: 10px;
+  color: #3a3a3c;
+  word-break: break-all;
+  text-align: left;
+}
+
+.settings-meta-value.plain {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+}
+
+.settings-status {
+  min-height: 1.2em;
+  font-size: 12px;
+  color: #34c759;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.settings-status.error {
+  color: #ff3b30;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  justify-content: stretch;
+}
+
+.settings-actions .onboarding-btn {
+  flex: 1;
+  margin: 0;
+}
+
+.onboarding-btn.secondary {
+  background: rgba(0, 0, 0, 0.06);
+  color: #1d1d1f;
+}
+
+.onboarding-btn.secondary:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.onboarding-btn.secondary:active {
+  background: rgba(0, 0, 0, 0.12);
+}

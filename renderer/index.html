@@ -216,6 +216,14 @@
               </p>
               <input type="password" id="onboarding-picovoice-key" class="onboarding-input onboarding-input-secondary"
                      placeholder="Picovoice key (pre-filled)" autocomplete="off" spellcheck="false" />
+              <p class="onboarding-ext-steps" style="margin-top:14px!important;">
+                <strong>ElevenLabs (optional)</strong> — nicer voice replies &amp; transcription (same key for both).
+                <a href="#" class="onboarding-inline-link" id="onboarding-open-elevenlabs">elevenlabs.io →</a>
+              </p>
+              <input type="password" id="onboarding-elevenlabs-key" class="onboarding-input onboarding-input-secondary"
+                     placeholder="ElevenLabs API key (optional)" autocomplete="off" spellcheck="false" />
+              <input type="text" id="onboarding-elevenlabs-voice" class="onboarding-input onboarding-input-secondary"
+                     placeholder="ElevenLabs Voice ID (optional — copy from Voices in dashboard)" autocomplete="off" spellcheck="false" />
             </div>
           </div>
           <button class="onboarding-btn" id="onboarding-next-0" disabled>Save &amp; Continue</button>
@@ -282,6 +290,52 @@
         </div>
 
         <div class="onboarding-version" id="onboarding-version"></div>
+      </div>
+    </div>
+
+    <!-- ═══ Settings (API keys) ═══ -->
+    <div class="settings-overlay hidden" id="settings-overlay">
+      <div class="onboarding-card settings-card">
+        <button type="button" class="response-dismiss" id="settings-close" aria-label="Close settings">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
+        <div class="onboarding-header settings-card-header">
+          <h2 class="onboarding-title">Settings</h2>
+          <p class="onboarding-subtitle">API keys &amp; local data</p>
+        </div>
+        <div class="settings-form">
+          <p class="settings-hint"><strong>Gemini</strong> powers reasoning. Get a key at
+            <a href="#" id="settings-link-aistudio" class="onboarding-inline-link">Google AI Studio</a>.</p>
+          <label class="settings-label" for="settings-gemini-key">Gemini API key</label>
+          <input type="password" id="settings-gemini-key" class="onboarding-input" autocomplete="off" spellcheck="false" />
+
+          <label class="settings-label" for="settings-picovoice-key">Picovoice (wake word)</label>
+          <input type="password" id="settings-picovoice-key" class="onboarding-input onboarding-input-secondary" autocomplete="off" spellcheck="false" />
+          <p class="settings-hint subtle"><a href="#" id="settings-link-picovoice" class="onboarding-inline-link">console.picovoice.ai</a></p>
+
+          <p class="settings-hint" style="margin-top:12px;"><strong>ElevenLabs</strong> (optional) — voice &amp;
+            <a href="#" id="settings-link-eleven" class="onboarding-inline-link">API keys</a></p>
+          <label class="settings-label" for="settings-elevenlabs-key">ElevenLabs API key</label>
+          <input type="password" id="settings-elevenlabs-key" class="onboarding-input onboarding-input-secondary" autocomplete="off" spellcheck="false" />
+          <label class="settings-label" for="settings-elevenlabs-voice">Voice ID</label>
+          <input type="text" id="settings-elevenlabs-voice" class="onboarding-input onboarding-input-secondary" placeholder="Optional" autocomplete="off" spellcheck="false" />
+
+          <div class="settings-meta">
+            <span class="settings-meta-label">Data directory</span>
+            <code class="settings-meta-value" id="settings-data-dir">—</code>
+            <span class="settings-meta-label">App version</span>
+            <span class="settings-meta-value plain" id="settings-app-version">—</span>
+          </div>
+
+          <p class="settings-status" id="settings-status" aria-live="polite"></p>
+
+          <div class="settings-actions">
+            <button type="button" class="onboarding-btn secondary settings-btn-cancel" id="settings-cancel">Cancel</button>
+            <button type="button" class="onboarding-btn" id="settings-save">Save &amp; restart backend</button>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -1482,8 +1482,11 @@ async function runOnboarding() {
 // ── Step 1: API Key entry ──
 const geminiKeyInput = document.getElementById("onboarding-gemini-key");
 const picovoiceKeyInput = document.getElementById("onboarding-picovoice-key");
+const elevenlabsKeyInput = document.getElementById("onboarding-elevenlabs-key");
+const elevenlabsVoiceInput = document.getElementById("onboarding-elevenlabs-voice");
 const next0Btn = document.getElementById("onboarding-next-0");
 const openAiStudioLink = document.getElementById("onboarding-open-aistudio");
+const openElevenlabsLink = document.getElementById("onboarding-open-elevenlabs");
 
 if (geminiKeyInput) {
   geminiKeyInput.addEventListener("input", () => {
@@ -1510,6 +1513,13 @@ if (openPicovoiceLink) {
   });
 }
 
+if (openElevenlabsLink) {
+  openElevenlabsLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.open("https://elevenlabs.io/app/settings/api-keys");
+  });
+}
+
 if (next0Btn) {
   next0Btn.addEventListener("click", async () => {
     const geminiKey = geminiKeyInput?.value.trim() ?? "";
@@ -1521,11 +1531,18 @@ if (next0Btn) {
     // Merge with any existing credentials and save
     const existing = await bridge.loadCredentials?.() ?? {};
     const picoKey = picovoiceKeyInput?.value.trim() ?? "";
-    const newCreds = {
-      ...existing,
-      gemini_api_key: geminiKey,
-      ...(picoKey && { picovoice_key: picoKey }),
-    };
+    const elKey = elevenlabsKeyInput?.value.trim() ?? "";
+    const elVoice = elevenlabsVoiceInput?.value.trim() ?? "";
+    const newCreds = { ...existing, gemini_api_key: geminiKey };
+    if (picoKey) newCreds.picovoice_key = picoKey;
+    if (elKey) {
+      newCreds.elevenlabs_api_key = elKey;
+      if (elVoice) newCreds.elevenlabs_voice_id = elVoice;
+      else delete newCreds.elevenlabs_voice_id;
+    } else {
+      delete newCreds.elevenlabs_api_key;
+      delete newCreds.elevenlabs_voice_id;
+    }
     await bridge.saveCredentials?.(newCreds);
 
     // Transition to checklist step and start backend

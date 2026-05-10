@@ -21,6 +21,12 @@ const HOTKEYS = (process.env.LIQUID_HOTKEY || "CommandOrControl+Shift+Space,Alt+
   .map((value) => value.trim())
   .filter(Boolean);
 
+/** Open settings (API keys). Comma-separated list allowed. */
+const SETTINGS_HOTKEYS = (process.env.CIARA_SETTINGS_HOTKEY || "CommandOrControl+Comma")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
 const WINDOW_LEVEL = "screen-saver";
 
 // ── Path resolution (dev vs packaged) ──
@@ -171,6 +177,11 @@ async function startPythonBackend() {
   if (savedCreds?.gemini_api_key) spawnEnv.GEMINI_API_KEY = savedCreds.gemini_api_key;
   // Use saved Picovoice key if set, otherwise fall back to the bundled default
   spawnEnv.PICOVOICE_ACCESS_KEY = savedCreds?.picovoice_key || BUNDLED_PICOVOICE_KEY;
+
+  const elLabsKey = (savedCreds?.elevenlabs_api_key ?? "").trim();
+  if (elLabsKey) spawnEnv.ELEVENLABS_API_KEY = elLabsKey;
+  const elVoiceId = (savedCreds?.elevenlabs_voice_id ?? "").trim();
+  if (elVoiceId) spawnEnv.ELEVENLABS_VOICE_ID = elVoiceId;
 
   const ciaraDataDir = path.join(app.getPath("userData"), "ciara-data");
   try {
@@ -337,12 +348,26 @@ function registerHotkey() {
     }
   }
 
+  for (const accelerator of SETTINGS_HOTKEYS) {
+    const ok = globalShortcut.register(accelerator, () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send("settings:open");
+    });
+    if (ok) {
+      registeredCount += 1;
+    } else {
+      console.error(`Failed to register settings shortcut: ${accelerator}`);
+    }
+  }
+
   if (registeredCount === 0) {
     console.error("No usable global shortcuts were registered.");
   }
 }
 
-function setMousePassthrough(ignore) {
+
   if (!mainWindow || mainWindow.isDestroyed()) return;
   if (ignore) {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -488,6 +513,17 @@ ipcMain.handle("app:is-packaged", () => {
 ipcMain.handle("backend:start", async () => {
   const ok = await startPythonBackend();
   return { ok };
+});
+
+ipcMain.handle("backend:restart", async () => {
+  stopPythonBackend();
+  await sleep(500);
+  const ok = await startPythonBackend();
+  return { ok };
+});
+
+ipcMain.handle("app:get-data-dir-path", () => {
+  return path.join(app.getPath("userData"), "ciara-data");
 });
 
 // ═══════════════════════════════════════════════════════════════

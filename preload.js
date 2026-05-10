@@ -40,4 +40,12 @@ contextBridge.exposeInMainWorld("overlayAPI", {
     ipcRenderer.on("setup:progress", wrapped);
     return () => ipcRenderer.removeListener("setup:progress", wrapped);
   },
+
+  onSettingsOpen: (handler) => {
+    const wrapped = () => handler();
+    ipcRenderer.on("settings:open", wrapped);
+    return () => ipcRenderer.removeListener("settings:open", wrapped);
+  },
+  restartBackend: () => ipcRenderer.invoke("backend:restart"),
+  getDataDirPath: () => ipcRenderer.invoke("app:get-data-dir-path"),
 });
