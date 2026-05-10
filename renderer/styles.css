@@ -2034,7 +2034,68 @@ body {
   font-weight: 600;
 }
 
-/* ── Checklist (Step 2) ── */
+.onboarding-body .onboarding-step-intro {
+  margin-bottom: 14px !important;
+  color: #334155 !important;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* Windows setup / troubleshooting callouts */
+.onboarding-win-callout {
+  margin-top: 14px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 14px;
+  background: rgba(224, 242, 254, 0.45);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 12px rgba(37, 99, 235, 0.06);
+}
+
+.onboarding-body .onboarding-win-callout-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #0f172a !important;
+}
+
+.onboarding-win-callout-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.onboarding-body .onboarding-win-callout-list li {
+  margin-bottom: 8px;
+}
+
+.onboarding-body .onboarding-win-callout-list li:last-child {
+  margin-bottom: 0;
+}
+
+.onboarding-win-path-code {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  word-break: break-all;
+  white-space: pre-wrap;
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ── Checklist (Step 2) — glass rows ── */
 .onboarding-checklist {
   display: flex;
   flex-direction: column;
@@ -2044,34 +2105,129 @@ body {
 .check-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-size: 13px;
-  font-weight: 500;
-  color: #1d1d1f;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  border-radius: 12px;
-  transition: background 0.2s, border-color 0.2s;
+  font-weight: 600;
+  color: #0f172a;
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 10px rgba(15, 23, 42, 0.06);
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
 }
 
 .check-item .check-icon {
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
+  font-size: 15px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  line-height: 1;
+}
+
+.check-item .check-label {
+  text-align: left;
+  letter-spacing: -0.01em;
+}
+
+.check-item.pending .check-icon {
+  animation: onboarding-check-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes onboarding-check-pulse {
+  50% { opacity: 0.55; transform: scale(0.96); }
 }
 
 .check-item.ok {
-  background: rgba(52, 199, 89, 0.06);
-  border-color: rgba(52, 199, 89, 0.15);
+  background: rgba(255, 255, 255, 0.38);
+  border-color: rgba(74, 222, 128, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 2px 14px rgba(22, 163, 74, 0.08);
 }
-.check-item.ok .check-icon { color: #34c759; }
+
+.check-item.ok .check-icon {
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.35);
+}
 
 .check-item.fail {
-  background: rgba(255, 59, 48, 0.06);
-  border-color: rgba(255, 59, 48, 0.15);
+  background: rgba(255, 255, 255, 0.38);
+  border-color: rgba(248, 113, 113, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 2px 14px rgba(239, 68, 68, 0.07);
 }
-.check-item.fail .check-icon { color: #ff3b30; }
+
+.check-item.fail .check-icon {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.38);
+}
+
+/* Collapsible setup log */
+.onboarding-log-panel {
+  margin-top: 10px;
+}
+
+.onboarding-log-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.onboarding-log-toggle:hover {
+  background: rgba(255, 255, 255, 0.48);
+  color: #0f172a;
+}
+
+.onboarding-log-chevron {
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  opacity: 0.85;
+}
+
+.onboarding-log-panel.is-expanded .onboarding-log-chevron {
+  transform: rotate(180deg);
+}
+
+.onboarding-setup-log-shell {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease;
+}
+
+.onboarding-log-panel.is-expanded .onboarding-setup-log-shell {
+  max-height: 220px;
+  opacity: 1;
+  margin-top: 8px;
+}
 
 /* ── Shortcuts (Step 3) ── */
 .shortcut-row {
@@ -2088,85 +2244,186 @@ body {
   min-width: 30px;
   height: 30px;
   padding: 0 8px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1d1d1f;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .shortcut-label {
   font-size: 13px;
-  color: #6e6e73;
+  color: #64748b;
+  font-weight: 500;
   margin-left: 8px;
 }
 
 .onboarding-hint {
   font-size: 12px !important;
-  color: #6e6e73 !important;
+  color: #64748b !important;
   margin-top: 16px !important;
 }
 
-/* ── Extension install box ── */
+/* ── Extension install (Step 3) — glass card ── */
 .onboarding-extension-box {
   margin-top: 18px;
-  padding: 14px 16px;
-  background: rgba(0, 122, 255, 0.04);
-  border: 1px solid rgba(0, 122, 255, 0.12);
-  border-radius: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 10px 36px -14px rgba(37, 99, 235, 0.14);
 }
-.onboarding-extension-box .onboarding-hint {
-  margin-top: 0 !important;
-  margin-bottom: 10px !important;
+
+.onboarding-ext-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.onboarding-ext-icon {
+  flex-shrink: 0;
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.08));
+}
+
+.onboarding-ext-head-copy {
+  min-width: 0;
+  text-align: left;
+}
+
+.onboarding-ext-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.onboarding-ext-desc {
+  margin: 0;
+  font-size: 12px;
   line-height: 1.5;
-  color: #1d1d1f !important;
+  font-weight: 500;
+  color: #475569;
 }
+
 .onboarding-ext-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
+
 .onboarding-ext-btn {
   flex: 1;
-  padding: 10px 14px;
+  min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
   border: none;
-  border-radius: 10px;
-  background: #007aff;
-  color: white;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: filter 0.2s, transform 0.15s, box-shadow 0.2s, background 0.2s;
 }
-.onboarding-ext-btn:hover {
-  background: #0066d6;
+
+.onboarding-ext-btn-ico {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
 }
+
+.onboarding-ext-btn-label {
+  text-align: center;
+  line-height: 1.25;
+}
+
+.onboarding-ext-btn.onboarding-btn-gradient {
+  width: auto;
+  min-height: 42px;
+  color: #fff;
+  box-shadow:
+    0 4px 18px -6px rgba(37, 99, 235, 0.55),
+    0 2px 8px rgba(14, 165, 233, 0.22);
+}
+
+.onboarding-ext-btn.onboarding-btn-gradient:hover {
+  filter: brightness(1.05);
+}
+
+.onboarding-ext-btn-primary.is-error {
+  box-shadow:
+    0 0 0 2px rgba(239, 68, 68, 0.65),
+    0 4px 18px -6px rgba(37, 99, 235, 0.45),
+    0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
 .onboarding-ext-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
-.onboarding-ext-btn.secondary {
-  background: rgba(0, 0, 0, 0.04);
-  color: #48484a;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+
+.onboarding-ext-btn-secondary {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
-.onboarding-ext-btn.secondary:hover {
-  background: rgba(0, 0, 0, 0.07);
+
+.onboarding-ext-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.56);
+  filter: none;
 }
+
+.onboarding-ext-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .onboarding-ext-steps {
-  font-size: 11px !important;
-  color: #6e6e73 !important;
   margin: 0 !important;
-  line-height: 1.5;
+  font-size: 11px !important;
+  line-height: 1.55 !important;
+  color: #64748b !important;
+  text-align: left;
 }
+
 .onboarding-ext-steps code {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  color: #1d1d1f;
+  display: inline-block;
+  margin: 0 2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  vertical-align: middle;
+}
+
+.onboarding-ext-arrow {
+  display: inline-block;
+  margin: 0 4px;
+  opacity: 0.45;
+  font-size: 10px;
+  vertical-align: middle;
 }
 
 /* ── Primary action (gradient glass CTA) ── */
@@ -2474,17 +2731,24 @@ body {
 
 /* ── Setup log (Step 2) ── */
 .onboarding-setup-log {
-  margin-top: 12px;
+  margin-top: 0;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  border-radius: 10px;
-  font-size: 11px;
-  color: #6e6e73;
-  font-family: "SF Mono", "Menlo", monospace;
-  min-height: 24px;
-  line-height: 1.5;
-  transition: opacity 0.3s;
+  max-height: 180px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+  font-size: 10px;
+  color: #475569;
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  min-height: 28px;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2599,6 +2863,30 @@ body {
 
 .settings-status.error {
   color: #dc2626;
+}
+
+.settings-win-python-note {
+  margin-top: 14px;
+  padding: 11px 13px;
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #334155;
+  text-align: left;
+  border-radius: 12px;
+  background: rgba(224, 242, 254, 0.42);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.settings-win-python-note strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.settings-win-python-note .onboarding-win-path-code {
+  margin-top: 8px;
+  display: block;
 }
 
 .settings-actions {

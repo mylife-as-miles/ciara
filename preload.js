@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   // ── App info ──
   getVersion: () => ipcRenderer.invoke("app:get-version"),
   isPackaged: () => ipcRenderer.invoke("app:is-packaged"),
+  getPlatform: () => ipcRenderer.invoke("app:get-platform"),
+  getVenvPath: () => ipcRenderer.invoke("app:get-venv-path"),
 
   // ── Chrome Extension ──
   exportExtension: () => ipcRenderer.invoke("extension:export"),

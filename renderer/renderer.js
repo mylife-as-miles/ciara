@@ -27,7 +27,15 @@ const bridge = window.overlayAPI || {
   restartBackend: async () => ({ ok: false }),
   getDataDirPath: async () => "",
   getVersion: async () => "",
+  getPlatform: async () => "",
+  getVenvPath: async () => "",
+  startBackend: async () => ({ ok: false }),
+  exportExtension: async () => ({ success: false }),
+  revealExtension: async () => false,
+  onSetupProgress: () => () => { },
   onSettingsOpen: () => () => { },
+  isFirstLaunch: async () => false,
+  generateUserId: async () => ({}),
 };
 
 /* ── IPC Bridge ── */
@@ -1501,12 +1509,49 @@ const onboardingStep2 = document.getElementById("onboarding-step-2");
 const onboardingStep3 = document.getElementById("onboarding-step-3");
 const onboardingVersion = document.getElementById("onboarding-version");
 
+async function hydrateWindowsOnboardingHints() {
+  let plat = "";
+  try {
+    plat = await bridge.getPlatform?.() ?? "";
+  } catch {
+    plat = "";
+  }
+  const isWin = plat === "win32";
+  let venvPath = "";
+  try {
+    venvPath = String(await bridge.getVenvPath?.() ?? "").trim();
+  } catch {
+    venvPath = "";
+  }
+
+  document.getElementById("onboarding-win-callout-step1")?.classList.toggle("hidden", !isWin);
+  document.getElementById("onboarding-win-callout-step2")?.classList.toggle("hidden", !isWin);
+
+  ["onboarding-venv-delete-path", "onboarding-venv-delete-path-2"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el || !venvPath) return;
+    el.textContent = venvPath;
+  });
+
+  ["onboarding-python-download-link", "onboarding-python-download-link-2"].forEach((linkId) => {
+    const el = document.getElementById(linkId);
+    if (!el || el.dataset.pythonWinWired === "1") return;
+    el.dataset.pythonWinWired = "1";
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.open("https://www.python.org/downloads/windows/");
+    });
+  });
+}
+
 async function runOnboarding() {
   const isFirst = await bridge.isFirstLaunch?.() ?? false;
   if (!isFirst) return;
 
   const version = await bridge.getVersion?.() ?? "1.0.0";
   if (onboardingVersion) onboardingVersion.textContent = `v${version}`;
+
+  await hydrateWindowsOnboardingHints();
 
   setMouseEnabled(true);
   onboardingOverlay.classList.remove("hidden");
@@ -1584,6 +1629,27 @@ async function populateSettingsForm() {
   if (settingsStatus) {
     settingsStatus.textContent = "";
     settingsStatus.classList.remove("error");
+  }
+  const settingsWinNote = document.getElementById("settings-win-python-note");
+  const settingsWinVenv = document.getElementById("settings-win-venv-path");
+  if (settingsWinNote && settingsWinVenv) {
+    let plat = "";
+    try {
+      plat = await bridge.getPlatform?.() ?? "";
+    } catch {
+      plat = "";
+    }
+    if (plat === "win32") {
+      try {
+        const vp = String(await bridge.getVenvPath?.() ?? "").trim();
+        settingsWinVenv.textContent = vp || "—";
+      } catch {
+        settingsWinVenv.textContent = "—";
+      }
+      settingsWinNote.classList.remove("hidden");
+    } else {
+      settingsWinNote.classList.add("hidden");
+    }
   }
 }
 
@@ -1740,17 +1806,39 @@ const next2Btn = document.getElementById("onboarding-next-2");
 function setCheck(el, state) {
   if (!el) return;
   const icon = el.querySelector(".check-icon");
-  el.classList.remove("ok", "fail");
-  if (state === "ok")   { el.classList.add("ok");   if (icon) icon.textContent = "✓"; }
-  else if (state === "fail") { el.classList.add("fail"); if (icon) icon.textContent = "✗"; }
-  else { if (icon) icon.textContent = "⏳"; }
+  el.classList.remove("ok", "fail", "pending");
+  if (state === "ok") {
+    el.classList.add("ok");
+    if (icon) icon.textContent = "✓";
+  } else if (state === "fail") {
+    el.classList.add("fail");
+    if (icon) icon.textContent = "✗";
+  } else if (state === "spin") {
+    el.classList.add("pending");
+    if (icon) icon.textContent = "⏳";
+  } else {
+    if (icon) icon.textContent = "⏳";
+  }
 }
 
-// Forward setup.sh progress from main process to the log box
+// Collapsible setup log + forward progress from main
+const onboardingLogPanel = document.getElementById("onboarding-log-panel");
+const onboardingLogToggle = document.getElementById("onboarding-log-toggle");
+if (onboardingLogToggle && onboardingLogPanel) {
+  onboardingLogToggle.addEventListener("click", () => {
+    const open = onboardingLogPanel.classList.toggle("is-expanded");
+    onboardingLogToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+}
+
 if (bridge.onSetupProgress) {
   bridge.onSetupProgress((text) => {
     if (!setupLogEl) return;
     setupLogEl.textContent = text;
+    if (onboardingLogPanel && typeof text === "string" && text.trim()) {
+      onboardingLogPanel.classList.add("is-expanded");
+      if (onboardingLogToggle) onboardingLogToggle.setAttribute("aria-expanded", "true");
+    }
   });
 }
 
@@ -1767,10 +1855,20 @@ async function runSetupChecklist() {
   const startResult = await bridge.startBackend?.() ?? { ok: false };
   setCheck(checkPythonEl, startResult.ok ? "ok" : "fail");
 
-  // Wait up to 15 seconds for WebSocket to connect
+  if (startResult.ok) {
+    try {
+      if (app.ws) app.ws.close();
+    } catch {
+      // ignore
+    }
+    app.ws = null;
+    connectWebSocket();
+  }
+
+  // Wait for WebSocket (reconnect backoff can exceed 15s on a cold start)
   setCheck(checkWsEl, "spin");
   let wsOk = false;
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 90; i++) {
     if (app.ws && app.ws.readyState === WebSocket.OPEN) { wsOk = true; break; }
     await new Promise(r => setTimeout(r, 500));
   }
@@ -1811,26 +1909,32 @@ if (onboardingDone) {
 const exportExtBtn = document.getElementById("onboarding-export-ext");
 const revealExtBtn = document.getElementById("onboarding-reveal-ext");
 
-if (exportExtBtn) {
+const exportExtLabel = exportExtBtn?.querySelector(".onboarding-ext-btn-label");
+if (exportExtBtn && exportExtLabel) {
+  const exportExtDefaultLabel = exportExtLabel.textContent;
   exportExtBtn.addEventListener("click", async () => {
-    exportExtBtn.textContent = "Saving…";
     exportExtBtn.disabled = true;
+    exportExtBtn.classList.remove("is-error");
+    exportExtLabel.textContent = "Saving…";
     try {
       const result = await bridge.exportExtension();
       if (result?.success) {
-        exportExtBtn.textContent = "✅ Saved! Opening folder…";
+        exportExtLabel.textContent = "Saved! Opening folder…";
       } else if (result?.reason === "cancelled") {
-        exportExtBtn.textContent = "📥 Save Extension to Downloads";
+        exportExtLabel.textContent = exportExtDefaultLabel;
       } else {
-        exportExtBtn.textContent = "❌ Failed — try again";
+        exportExtBtn.classList.add("is-error");
+        exportExtLabel.textContent = "Failed — try again";
       }
     } catch {
-      exportExtBtn.textContent = "❌ Error — try again";
+      exportExtBtn.classList.add("is-error");
+      exportExtLabel.textContent = "Error — try again";
     }
     exportExtBtn.disabled = false;
-    setTimeout(() => {
-      exportExtBtn.textContent = "📥 Save Extension to Downloads";
-    }, 3000);
+    window.setTimeout(() => {
+      exportExtLabel.textContent = exportExtDefaultLabel;
+      exportExtBtn.classList.remove("is-error");
+    }, 4500);
   });
 }
 

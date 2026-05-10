@@ -2,7 +2,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const net = require("node:net");
 const crypto = require("node:crypto");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const {
   app,
   BrowserWindow,
@@ -107,11 +107,149 @@ async function canReachBackend(timeoutMs = 1500) {
   return backendReady && bridgeReady;
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  Python Environment Setup
-// ═══════════════════════════════════════════════════════════════
+/** Path to the interpreter inside the bundled venv (platform-specific). */
+function getVenvPythonPath(venvRoot) {
+  if (process.platform === "win32") {
+    const scripts = path.join(venvRoot, "Scripts");
+    for (const name of ["python.exe", "python3.exe"]) {
+      const p = path.join(scripts, name);
+      if (fs.existsSync(p)) return p;
+    }
+    return path.join(scripts, "python.exe");
+  }
+  return path.join(venvRoot, "bin", "python3");
+}
+
+function sendSetupProgressLine(text) {
+  const line = String(text).trim();
+  if (!line) return;
+  process.stdout.write(`[Setup] ${line}\n`);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("setup:progress", line);
+  }
+}
+
+/** Windows: find Python 3.10+ on PATH (py launcher or python/python3). */
+function findWindowsPython310() {
+  const candidates = [
+    ["py", ["-3.13"]],
+    ["py", ["-3.12"]],
+    ["py", ["-3.11"]],
+    ["py", ["-3.10"]],
+    ["py", ["-3"]],
+    ["python3", []],
+    ["python", []],
+  ];
+  for (const [cmd, prefix] of candidates) {
+    const r = spawnSync(
+      cmd,
+      [...prefix, "-c", "import sys; print(f\"{sys.version_info[0]}.{sys.version_info[1]}\")"],
+      { encoding: "utf8", windowsHide: true }
+    );
+    if (r.status !== 0 || !r.stdout) continue;
+    const parts = r.stdout.trim().split(".");
+    const major = parseInt(parts[0], 10);
+    const minor = parseInt(parts[1], 10);
+    if (major === 3 && minor >= 10) {
+      return { cmd, prefix };
+    }
+  }
+  return null;
+}
+
+/**
+ * Windows: create/upgrade venv with `python -m venv` + pip (no bash required).
+ * macOS/Linux: still uses setup.sh under bash.
+ */
+function runSetupWindows(venvRoot) {
+  const requirementsPath = path.join(BACKEND_ROOT, "requirements.txt");
+  const projectRoot = IS_PACKAGED ? APP_ROOT : __dirname;
+  const venvPy = getVenvPythonPath(venvRoot);
+
+  if (fs.existsSync(venvPy)) {
+    sendSetupProgressLine("Virtual environment found — upgrading packages…");
+    let r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "--upgrade", "pip"], {
+      encoding: "utf8",
+      windowsHide: true,
+      cwd: projectRoot,
+    });
+    if (r.status !== 0) {
+      sendSetupProgressLine(`pip upgrade failed: ${(r.stderr || r.stdout || "").slice(0, 400)}`);
+      return false;
+    }
+    if (fs.existsSync(requirementsPath)) {
+      r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "-r", requirementsPath], {
+        encoding: "utf8",
+        windowsHide: true,
+        cwd: projectRoot,
+      });
+      if (r.status !== 0) {
+        sendSetupProgressLine(`Dependency install failed: ${(r.stderr || r.stdout || "").slice(0, 500)}`);
+        return false;
+      }
+    }
+    sendSetupProgressLine("Setup complete!");
+    return true;
+  }
+
+  const found = findWindowsPython310();
+  if (!found) {
+    sendSetupProgressLine(
+      "Python 3.10+ not found. Install from python.org and enable “Add python.exe to PATH”, then restart CIARA."
+    );
+    console.error("[Setup] No Python 3.10+ found on Windows PATH");
+    return false;
+  }
+
+  sendSetupProgressLine(`Using ${found.cmd} ${found.prefix.join(" ")} — creating virtual environment…`);
+  let r = spawnSync(found.cmd, [...found.prefix, "-m", "venv", venvRoot], {
+    cwd: projectRoot,
+    encoding: "utf8",
+    windowsHide: true,
+    env: { ...process.env, CIARA_VENV_DIR: venvRoot },
+  });
+  if (r.status !== 0) {
+    sendSetupProgressLine(`venv creation failed: ${(r.stderr || r.stdout || "").slice(0, 500)}`);
+    return false;
+  }
+
+  if (!fs.existsSync(venvPy)) {
+    sendSetupProgressLine(`Expected interpreter missing: ${venvPy}`);
+    return false;
+  }
+
+  sendSetupProgressLine("Installing pip and dependencies…");
+  r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "--upgrade", "pip"], {
+    encoding: "utf8",
+    windowsHide: true,
+    cwd: projectRoot,
+  });
+  if (r.status !== 0) {
+    sendSetupProgressLine(`pip bootstrap failed: ${(r.stderr || r.stdout || "").slice(0, 400)}`);
+    return false;
+  }
+
+  if (fs.existsSync(requirementsPath)) {
+    r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "-r", requirementsPath], {
+      encoding: "utf8",
+      windowsHide: true,
+      cwd: projectRoot,
+    });
+    if (r.status !== 0) {
+      sendSetupProgressLine(`Dependency install failed: ${(r.stderr || r.stdout || "").slice(0, 500)}`);
+      return false;
+    }
+  }
+
+  sendSetupProgressLine("Setup complete!");
+  return true;
+}
 
 function runSetup(venvRoot) {
+  if (process.platform === "win32") {
+    return Promise.resolve(runSetupWindows(venvRoot));
+  }
+
   return new Promise((resolve) => {
     const setupPath = IS_PACKAGED
       ? path.join(APP_ROOT, "setup.sh")
@@ -150,7 +288,7 @@ function runSetup(venvRoot) {
 
 async function startPythonBackend() {
   const venvRoot = getVenvRoot();
-  const venvPythonPath = path.join(venvRoot, "bin", "python3");
+  const venvPythonPath = getVenvPythonPath(venvRoot);
   const scriptPath = path.join(BACKEND_ROOT, "servers", "local_server.py");
   const cwd = IS_PACKAGED ? APP_ROOT : __dirname;
 
@@ -517,6 +655,11 @@ ipcMain.handle("app:is-packaged", () => {
   return IS_PACKAGED;
 });
 
+ipcMain.handle("app:get-platform", () => process.platform);
+
+/** Full path to the Python venv directory (for user-facing reset instructions). */
+ipcMain.handle("app:get-venv-path", () => getVenvRoot());
+
 ipcMain.handle("backend:start", async () => {
   const ok = await startPythonBackend();
   return { ok };
@@ -542,6 +685,11 @@ const CHROME_EXT_SOURCE = IS_PACKAGED
   : path.join(__dirname, "chrome_extension");
 
 ipcMain.handle("extension:export", async () => {
+  if (!fs.existsSync(CHROME_EXT_SOURCE)) {
+    console.error("[Extension] Source missing:", CHROME_EXT_SOURCE);
+    return { success: false, reason: "Extension files are missing from the app bundle." };
+  }
+
   // Let customer choose where to save the extension folder
   const { canceled, filePath: destPath } = await dialog.showSaveDialog(mainWindow, {
     title: "Save CIARA Browser Extension",
@@ -551,12 +699,10 @@ ipcMain.handle("extension:export", async () => {
   if (canceled || !destPath) return { success: false, reason: "cancelled" };
 
   try {
-    // Copy extension folder to chosen location
-    const { execSync } = require("node:child_process");
     if (fs.existsSync(destPath)) {
-      execSync(`rm -rf "${destPath}"`);
+      fs.rmSync(destPath, { recursive: true, force: true });
     }
-    execSync(`cp -R "${CHROME_EXT_SOURCE}" "${destPath}"`);
+    fs.cpSync(CHROME_EXT_SOURCE, destPath, { recursive: true });
 
     // Write a friendly install guide inside
     const guide = [

@@ -264,6 +264,14 @@
               </div>
             </div>
           </div>
+          <div id="onboarding-win-callout-step1" class="onboarding-win-callout hidden" role="note">
+            <p class="onboarding-win-callout-title">Windows — local Python setup</p>
+            <ul class="onboarding-win-callout-list">
+              <li>CIARA installs Python packages when you tap <strong>Save &amp; Continue</strong>. You need <a href="#" class="onboarding-inline-link" id="onboarding-python-download-link">Python&nbsp;3.10 or newer</a> with <strong>Add python.exe to PATH</strong> enabled in the installer.</li>
+              <li>If a previous run failed during setup: quit CIARA completely, delete the folder below, then start CIARA again so it can rebuild the environment.<br/>
+                <code id="onboarding-venv-delete-path" class="onboarding-win-path-code">—</code></li>
+            </ul>
+          </div>
           <button type="button" class="onboarding-btn onboarding-btn-gradient" id="onboarding-next-0" disabled>
             <span class="onboarding-btn-label">Save &amp; Continue</span>
             <svg class="onboarding-btn-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -273,24 +281,42 @@
         <!-- Step 2: Setup Checklist -->
         <div class="onboarding-step" id="onboarding-step-2">
           <div class="onboarding-body">
-            <p>Setting up CIARA — takes about 60 seconds the first time while Python dependencies install.</p>
+            <p class="onboarding-step-intro">Setting up CIARA — takes about 60 seconds the first time while Python dependencies install.</p>
+            <div id="onboarding-win-callout-step2" class="onboarding-win-callout hidden" role="note">
+              <p class="onboarding-win-callout-title">Windows troubleshooting</p>
+              <ul class="onboarding-win-callout-list">
+                <li>Requires <strong>Python 3.10+</strong> on your PATH — see the note on the previous step or <a href="#" class="onboarding-inline-link" id="onboarding-python-download-link-2">python.org</a>.</li>
+                <li>If <strong>Python environment</strong> or <strong>WebSocket</strong> fails, open <strong>more</strong> below for the log, then try deleting <code id="onboarding-venv-delete-path-2" class="onboarding-win-path-code">—</code> and running CIARA again.</li>
+              </ul>
+            </div>
             <div class="onboarding-checklist">
               <div class="check-item" id="check-python">
-                <span class="check-icon">⏳</span>
-                <span>Python environment</span>
+                <span class="check-icon" aria-hidden="true">⏳</span>
+                <span class="check-label">Python environment</span>
               </div>
               <div class="check-item" id="check-ws">
-                <span class="check-icon">⏳</span>
-                <span>WebSocket connection</span>
+                <span class="check-icon" aria-hidden="true">⏳</span>
+                <span class="check-label">WebSocket connection</span>
               </div>
               <div class="check-item" id="check-mic">
-                <span class="check-icon">⏳</span>
-                <span>Microphone access</span>
+                <span class="check-icon" aria-hidden="true">⏳</span>
+                <span class="check-label">Microphone access</span>
               </div>
             </div>
-            <div class="onboarding-setup-log" id="onboarding-setup-log"></div>
+            <div class="onboarding-log-panel" id="onboarding-log-panel">
+              <button type="button" class="onboarding-log-toggle" id="onboarding-log-toggle" aria-expanded="false" aria-controls="onboarding-setup-log">
+                <svg class="onboarding-log-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                <span>more</span>
+              </button>
+              <div class="onboarding-setup-log-shell" id="onboarding-setup-log-shell">
+                <div class="onboarding-setup-log" id="onboarding-setup-log" role="log" aria-live="polite"></div>
+              </div>
+            </div>
           </div>
-          <button class="onboarding-btn" id="onboarding-next-2" disabled>Continue</button>
+          <button type="button" class="onboarding-btn onboarding-btn-gradient" id="onboarding-next-2" disabled>
+            <span class="onboarding-btn-label">Continue</span>
+            <svg class="onboarding-btn-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
         </div>
 
         <!-- Step 3: Shortcuts & Extension -->
@@ -310,24 +336,31 @@
             </div>
 
             <div class="onboarding-extension-box">
-              <p class="onboarding-hint">
-                <strong>🧩 Chrome Extension</strong><br/>
-                Install the Browser Bridge to let CIARA search the web, fill forms, and interact with pages.
-              </p>
+              <div class="onboarding-ext-head">
+                <span class="onboarding-ext-icon" aria-hidden="true">🧩</span>
+                <div class="onboarding-ext-head-copy">
+                  <h3 class="onboarding-ext-title">Chrome Extension</h3>
+                  <p class="onboarding-ext-desc">Install the Browser Bridge to let CIARA search the web, fill forms, and interact with pages.</p>
+                </div>
+              </div>
               <div class="onboarding-ext-actions">
-                <button class="onboarding-ext-btn" id="onboarding-export-ext">
-                  📥 Save Extension to Downloads
+                <button type="button" class="onboarding-ext-btn onboarding-ext-btn-primary onboarding-btn-gradient" id="onboarding-export-ext">
+                  <span class="onboarding-ext-btn-ico" aria-hidden="true">📥</span>
+                  <span class="onboarding-ext-btn-label">Save Extension to Downloads</span>
                 </button>
-                <button class="onboarding-ext-btn secondary" id="onboarding-reveal-ext">
-                  📂 Show Extension Folder
+                <button type="button" class="onboarding-ext-btn onboarding-ext-btn-secondary" id="onboarding-reveal-ext">
+                  <span class="onboarding-ext-btn-ico" aria-hidden="true">📂</span>
+                  <span class="onboarding-ext-btn-label">Show Extension Folder</span>
                 </button>
               </div>
               <p class="onboarding-ext-steps">
-                After saving: Open Chrome → <code>chrome://extensions</code> → Enable Developer Mode → Load unpacked → Select the saved folder
+                After saving: Open Chrome <span class="onboarding-ext-arrow" aria-hidden="true">→</span> <code>chrome://extensions</code> <span class="onboarding-ext-arrow" aria-hidden="true">→</span> Enable Developer Mode <span class="onboarding-ext-arrow" aria-hidden="true">→</span> Load unpacked <span class="onboarding-ext-arrow" aria-hidden="true">→</span> Select the saved folder
               </p>
             </div>
           </div>
-          <button class="onboarding-btn" id="onboarding-done">Get Started</button>
+          <button type="button" class="onboarding-btn onboarding-btn-gradient" id="onboarding-done">
+            <span class="onboarding-btn-label">Get Started</span>
+          </button>
         </div>
 
         <div class="onboarding-version" id="onboarding-version"></div>
@@ -376,6 +409,11 @@
             <span class="settings-meta-label">App version</span>
             <span class="settings-meta-value plain" id="settings-app-version">—</span>
           </div>
+
+          <p id="settings-win-python-note" class="settings-win-python-note hidden" role="note">
+            <strong>Windows backend</strong> — CIARA uses a Python virtual environment. Install Python 3.10+ with <strong>Add python.exe to PATH</strong>.
+            To reset setup after failures, quit CIARA and delete: <code id="settings-win-venv-path" class="onboarding-win-path-code">—</code>
+          </p>
 
           <p class="settings-status" id="settings-status" aria-live="polite"></p>
 
