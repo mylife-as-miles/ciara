@@ -1518,8 +1518,35 @@ const picovoiceKeyInput = document.getElementById("onboarding-picovoice-key");
 const elevenlabsKeyInput = document.getElementById("onboarding-elevenlabs-key");
 const elevenlabsVoiceInput = document.getElementById("onboarding-elevenlabs-voice");
 const next0Btn = document.getElementById("onboarding-next-0");
+const next0BtnLabel = next0Btn?.querySelector(".onboarding-btn-label");
 const openAiStudioLink = document.getElementById("onboarding-open-aistudio");
 const openElevenlabsLink = document.getElementById("onboarding-open-elevenlabs");
+
+function wireOnboardingPasswordToggle(btn, input, labels) {
+  if (!btn || !input) return;
+  const open = btn.querySelector(".onboarding-eye-open");
+  const closed = btn.querySelector(".onboarding-eye-closed");
+  const { show: showLabel, hide: hideLabel } = labels;
+  btn.addEventListener("click", () => {
+    const reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    btn.setAttribute("aria-pressed", reveal ? "true" : "false");
+    btn.setAttribute("aria-label", reveal ? hideLabel : showLabel);
+    open?.classList.toggle("hidden", reveal);
+    closed?.classList.toggle("hidden", !reveal);
+  });
+}
+
+wireOnboardingPasswordToggle(
+  document.getElementById("onboarding-gemini-toggle"),
+  geminiKeyInput,
+  { show: "Show API key", hide: "Hide API key" },
+);
+wireOnboardingPasswordToggle(
+  document.getElementById("onboarding-pico-toggle"),
+  picovoiceKeyInput,
+  { show: "Show Picovoice key", hide: "Hide Picovoice key" },
+);
 
 if (geminiKeyInput) {
   geminiKeyInput.addEventListener("input", () => {
@@ -1593,7 +1620,6 @@ if (settingsLinkEleven) {
 }
 if (settingsClose) settingsClose.addEventListener("click", () => closeSettings());
 if (settingsMinimize) settingsMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
-if (onboardingMinimize) onboardingMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
 if (onboardingMinimize) onboardingMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
 if (settingsCancel) settingsCancel.addEventListener("click", () => closeSettings());
 
@@ -1678,7 +1704,7 @@ if (next0Btn) {
     if (!geminiKey) return;
 
     next0Btn.disabled = true;
-    next0Btn.textContent = "Saving…";
+    if (next0BtnLabel) next0BtnLabel.textContent = "Saving…";
 
     // Merge with any existing credentials and save
     const existing = await bridge.loadCredentials?.() ?? {};

@@ -205,34 +205,69 @@
           <h2 class="onboarding-title">Welcome to CIARA</h2>
           <p class="onboarding-expanded-name">Control Intelligence Assistant for Real-time Automation</p>
           <p class="onboarding-subtitle onboarding-tagline">Your AI desktop assistant</p>
+          <div class="onboarding-header-rule" aria-hidden="true"></div>
         </div>
 
         <!-- Step 1: API Key -->
         <div class="onboarding-step active" id="onboarding-step-1">
           <div class="onboarding-body">
-            <p>CIARA runs on Google's <strong>Gemma&nbsp;4</strong> models via the <strong>Gemini API</strong>.<br/>Get your key free at Google AI Studio — no credit card needed.</p>
+            <p class="onboarding-intro">CIARA runs on Google's <strong>Gemma&nbsp;4</strong> models via the <strong>Gemini API</strong>.<br/>Get your key free at Google AI Studio — no credit card needed.</p>
             <div class="onboarding-apikey-box">
               <a href="#" id="onboarding-open-aistudio" class="onboarding-link">Get free key at aistudio.google.com →</a>
-              <input type="password" id="onboarding-gemini-key" class="onboarding-input"
-                     placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" />
-              <p class="onboarding-ext-steps" style="margin-top:10px!important;">
-                <strong style="color:#34c759;">Wake word included ✅</strong> — "Hey CIARA" works out of the box.
-                Optionally replace with your own from
-                <a href="#" class="onboarding-inline-link" id="onboarding-open-picovoice">console.picovoice.ai</a>.
-              </p>
-              <input type="password" id="onboarding-picovoice-key" class="onboarding-input onboarding-input-secondary"
-                     placeholder="Picovoice key (pre-filled)" autocomplete="off" spellcheck="false" />
-              <p class="onboarding-ext-steps" style="margin-top:14px!important;">
-                <strong>ElevenLabs (optional)</strong> — nicer voice replies &amp; transcription (same key for both).
-                <a href="#" class="onboarding-inline-link" id="onboarding-open-elevenlabs">elevenlabs.io →</a>
-              </p>
-              <input type="password" id="onboarding-elevenlabs-key" class="onboarding-input onboarding-input-secondary"
-                     placeholder="ElevenLabs API key (optional)" autocomplete="off" spellcheck="false" />
-              <input type="text" id="onboarding-elevenlabs-voice" class="onboarding-input onboarding-input-secondary"
-                     placeholder="ElevenLabs Voice ID (optional — copy from Voices in dashboard)" autocomplete="off" spellcheck="false" />
+              <div class="onboarding-input-row">
+                <span class="onboarding-input-prefix" aria-hidden="true">
+                  <svg class="onboarding-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                </span>
+                <input type="password" id="onboarding-gemini-key" class="onboarding-input onboarding-input-inset"
+                       placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false" />
+                <button type="button" class="onboarding-input-suffix" id="onboarding-gemini-toggle" aria-label="Show API key" aria-pressed="false" tabindex="0">
+                  <svg class="onboarding-eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="onboarding-eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+
+              <div class="onboarding-wake-card">
+                <div class="onboarding-wake-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                </div>
+                <div class="onboarding-wake-copy">
+                  <p class="onboarding-wake-title"><strong>Wake word included</strong> · “Hey&nbsp;CIARA” works out of the box.</p>
+                  <p class="onboarding-wake-meta">Replace with your own key from <a href="#" class="onboarding-inline-link" id="onboarding-open-picovoice">console.picovoice.ai</a>.</p>
+                </div>
+              </div>
+
+              <div class="onboarding-input-row onboarding-input-row-secondary">
+                <span class="onboarding-input-prefix" aria-hidden="true">
+                  <svg class="onboarding-row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" id="onboarding-picovoice-key" class="onboarding-input onboarding-input-inset onboarding-input-secondary"
+                       placeholder="Picovoice access key (pre-filled)" autocomplete="off" spellcheck="false" />
+                <button type="button" class="onboarding-input-suffix" id="onboarding-pico-toggle" aria-label="Show Picovoice key" aria-pressed="false">
+                  <svg class="onboarding-eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="onboarding-eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+
+              <div class="onboarding-elevenlabs">
+                <div class="onboarding-elevenlabs-head">
+                  <span class="onboarding-elevenlabs-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 10v3M6 7v9M10 5v14M14 8v8M18 6v12M22 9v6"/></svg>
+                  </span>
+                  <span class="onboarding-elevenlabs-title">ElevenLabs <span class="onboarding-optional-pill">optional</span></span>
+                  <a href="#" class="onboarding-inline-link onboarding-elevenlabs-link" id="onboarding-open-elevenlabs">elevenlabs.io →</a>
+                </div>
+                <p class="onboarding-elevenlabs-hint">Nicer voice replies and transcription — same key for both.</p>
+                <input type="password" id="onboarding-elevenlabs-key" class="onboarding-input onboarding-input-secondary"
+                       placeholder="ElevenLabs API key (optional)" autocomplete="off" spellcheck="false" />
+                <input type="text" id="onboarding-elevenlabs-voice" class="onboarding-input onboarding-input-secondary"
+                       placeholder="Voice ID (optional — from Voices in dashboard)" autocomplete="off" spellcheck="false" />
+              </div>
             </div>
           </div>
-          <button class="onboarding-btn" id="onboarding-next-0" disabled>Save &amp; Continue</button>
+          <button type="button" class="onboarding-btn onboarding-btn-gradient" id="onboarding-next-0" disabled>
+            <span class="onboarding-btn-label">Save &amp; Continue</span>
+            <svg class="onboarding-btn-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
         </div>
 
         <!-- Step 2: Setup Checklist -->
