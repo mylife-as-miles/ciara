@@ -1841,7 +1841,8 @@ body {
    Soft frosted panel, navy type, glass input rows, gradient CTA
    ══════════════════════════════════════════════════════ */
 
-.onboarding-overlay {
+.onboarding-overlay,
+.settings-overlay {
   position: fixed;
   inset: 0;
   display: flex;
@@ -1854,8 +1855,11 @@ body {
     rgba(248, 250, 252, 0.52);
   backdrop-filter: blur(26px) saturate(165%);
   -webkit-backdrop-filter: blur(26px) saturate(165%);
-  z-index: 9999;
   pointer-events: auto;
+}
+
+.onboarding-overlay {
+  z-index: 9999;
   animation: onboard-fade-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -2484,20 +2488,11 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════
-   SETTINGS — same glass language as onboarding
+   SETTINGS — shares overlay backdrop + glass card with onboarding
    ══════════════════════════════════════════════════════ */
 
 .settings-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(245, 245, 247, 0.55);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
   z-index: 10050;
-  pointer-events: auto;
   animation: onboard-fade-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -2507,12 +2502,12 @@ body {
 
 .settings-card {
   position: relative;
-  width: 420px;
+  width: 418px;
   max-width: 94vw;
   max-height: 90vh;
   overflow-y: auto;
   text-align: left;
-  padding-top: 32px;
+  padding: 34px 26px 24px;
 }
 
 .settings-card-header {
@@ -2522,11 +2517,12 @@ body {
 
 .settings-expanded-name {
   font-size: 11px;
-  color: #6e6e73;
+  color: #475569;
+  font-weight: 500;
 }
 
 .settings-form {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .settings-label {
@@ -2535,7 +2531,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #8e8e93;
+  color: #475569;
   margin-top: 14px;
   margin-bottom: 0;
 }
@@ -2546,23 +2542,29 @@ body {
 
 .settings-hint {
   font-size: 12px;
-  color: #48484a;
+  color: #334155;
   line-height: 1.5;
   margin: 0 0 4px;
+}
+
+.settings-hint strong {
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .settings-hint.subtle {
   margin-top: 4px;
   font-size: 11px;
-  color: #8e8e93;
+  color: #64748b;
 }
 
 .settings-meta {
   margin-top: 18px;
   padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.35);
   border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 6px 12px;
@@ -2571,12 +2573,12 @@ body {
 
 .settings-meta-label {
   font-size: 11px;
-  color: #8e8e93;
+  color: #64748b;
 }
 
 .settings-meta-value {
   font-size: 10px;
-  color: #3a3a3c;
+  color: #0f172a;
   word-break: break-all;
   text-align: left;
 }
@@ -2584,18 +2586,19 @@ body {
 .settings-meta-value.plain {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 12px;
+  color: #334155;
 }
 
 .settings-status {
   min-height: 1.2em;
   font-size: 12px;
-  color: #34c759;
+  color: #16a34a;
   margin-top: 10px;
   text-align: center;
 }
 
 .settings-status.error {
-  color: #ff3b30;
+  color: #dc2626;
 }
 
 .settings-actions {
@@ -2611,14 +2614,19 @@ body {
 }
 
 .onboarding-btn.secondary {
-  background: rgba(0, 0, 0, 0.06);
-  color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.38);
+  color: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 8px rgba(15, 23, 42, 0.05);
 }
 
 .onboarding-btn.secondary:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.52);
+  filter: none;
 }
 
 .onboarding-btn.secondary:active {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.45);
 }
