@@ -367,7 +367,7 @@ function registerHotkey() {
   }
 }
 
-
+function setMousePassthrough(ignore) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   if (ignore) {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });

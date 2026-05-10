@@ -21,6 +21,12 @@ const bridge = window.overlayAPI || {
   onOverlayHidden: () => () => { },
   logError: () => { },
   logInfo: () => { },
+  loadCredentials: async () => ({}),
+  saveCredentials: async () => false,
+  restartBackend: async () => ({ ok: false }),
+  getDataDirPath: async () => "",
+  getVersion: async () => "",
+  onSettingsOpen: () => () => { },
 };
 
 /* ── IPC Bridge ── */
@@ -47,6 +53,21 @@ const commandInput = document.getElementById("command-input");
 const commandSend = document.getElementById("command-panel-send");
 const commandClose = document.getElementById("command-panel-close");
 const pillStopBtn = document.getElementById("pill-stop");
+
+const settingsOverlay = document.getElementById("settings-overlay");
+const settingsClose = document.getElementById("settings-close");
+const settingsLinkAistudio = document.getElementById("settings-link-aistudio");
+const settingsLinkPicovoice = document.getElementById("settings-link-picovoice");
+const settingsLinkEleven = document.getElementById("settings-link-eleven");
+const settingsGeminiKey = document.getElementById("settings-gemini-key");
+const settingsPicovoiceKey = document.getElementById("settings-picovoice-key");
+const settingsElevenlabsKey = document.getElementById("settings-elevenlabs-key");
+const settingsElevenlabsVoice = document.getElementById("settings-elevenlabs-voice");
+const settingsDataDir = document.getElementById("settings-data-dir");
+const settingsAppVersion = document.getElementById("settings-app-version");
+const settingsStatus = document.getElementById("settings-status");
+const settingsSave = document.getElementById("settings-save");
+const settingsCancel = document.getElementById("settings-cancel");
 
 /* ── Modal DOM Refs ── */
 const modalRich = document.getElementById("modal-rich");
@@ -1392,10 +1413,13 @@ function connectWebSocket() {
 }
 
 /* ── Events ── */
+let lastPointer = { x: 0, y: 0 };
+
 // Hit-test: check if mouse is over any interactive element
 function isOverInteractive(event) {
   // Onboarding is a full-screen modal — always interactive while visible
   if (onboardingOverlay && !onboardingOverlay.classList.contains("hidden")) return true;
+  if (settingsOverlay && !settingsOverlay.classList.contains("hidden")) return true;
 
   const x = event.clientX;
   const y = event.clientY;
@@ -1414,12 +1438,18 @@ function isOverInteractive(event) {
 }
 
 document.addEventListener("mousemove", (event) => {
+  lastPointer.x = event.clientX;
+  lastPointer.y = event.clientY;
   if (!app.visible) return setMouseEnabled(false);
   setMouseEnabled(isOverInteractive(event));
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    if (settingsOverlay && !settingsOverlay.classList.contains("hidden")) {
+      closeSettings();
+      return;
+    }
     // If agent is working, cancel the task
     if (app.current === State.DOING || app.current === State.LOADING) {
       cancelActiveTask();
@@ -1497,6 +1527,122 @@ if (geminiKeyInput) {
 // Pre-fill the bundled Picovoice key so wake word works out of the box
 const BUNDLED_PICOVOICE_KEY = "lDvqq7J641WbqdzMsPCdLlawELhfGZOGhaceFzl3ZYYYzeeuXq55YA==";
 if (picovoiceKeyInput) picovoiceKeyInput.value = BUNDLED_PICOVOICE_KEY;
+
+// ── Settings (hotkey / overlay) ──
+async function populateSettingsForm() {
+  const creds = await bridge.loadCredentials?.() ?? {};
+  if (settingsGeminiKey) settingsGeminiKey.value = creds.gemini_api_key || "";
+  if (settingsPicovoiceKey) {
+    const p = (creds.picovoice_key || "").trim();
+    settingsPicovoiceKey.value = p || BUNDLED_PICOVOICE_KEY;
+  }
+  if (settingsElevenlabsKey) settingsElevenlabsKey.value = creds.elevenlabs_api_key || "";
+  if (settingsElevenlabsVoice) settingsElevenlabsVoice.value = creds.elevenlabs_voice_id || "";
+  if (settingsDataDir) {
+    try {
+      const p = await bridge.getDataDirPath?.();
+      settingsDataDir.textContent = (p && String(p).trim()) || "—";
+    } catch {
+      settingsDataDir.textContent = "—";
+    }
+  }
+  if (settingsAppVersion) {
+    const v = await bridge.getVersion?.() ?? "";
+    const raw = String(v).trim() || "—";
+    settingsAppVersion.textContent = raw === "—" ? raw : (raw.startsWith("v") ? raw : `v${raw}`);
+  }
+  if (settingsStatus) {
+    settingsStatus.textContent = "";
+    settingsStatus.classList.remove("error");
+  }
+}
+
+async function openSettings() {
+  if (!settingsOverlay) return;
+  await populateSettingsForm();
+  setMouseEnabled(true);
+  settingsOverlay.classList.remove("hidden");
+}
+
+function closeSettings() {
+  if (!settingsOverlay) return;
+  settingsOverlay.classList.add("hidden");
+  setMouseEnabled(isOverInteractive({ clientX: lastPointer.x, clientY: lastPointer.y }));
+}
+
+if (settingsLinkAistudio) {
+  settingsLinkAistudio.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.open("https://aistudio.google.com/app/apikey");
+  });
+}
+if (settingsLinkPicovoice) {
+  settingsLinkPicovoice.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.open("https://console.picovoice.ai");
+  });
+}
+if (settingsLinkEleven) {
+  settingsLinkEleven.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.open("https://elevenlabs.io/app/settings/api-keys");
+  });
+}
+if (settingsClose) settingsClose.addEventListener("click", () => closeSettings());
+if (settingsCancel) settingsCancel.addEventListener("click", () => closeSettings());
+
+if (settingsSave) {
+  settingsSave.addEventListener("click", async () => {
+    const geminiKey = settingsGeminiKey?.value.trim() ?? "";
+    if (!geminiKey) {
+      if (settingsStatus) {
+        settingsStatus.textContent = "Gemini API key is required.";
+        settingsStatus.classList.add("error");
+      }
+      return;
+    }
+    if (settingsStatus) settingsStatus.classList.remove("error");
+    const prevDisabled = settingsSave.disabled;
+    const prevLabel = settingsSave.textContent;
+    settingsSave.disabled = true;
+    settingsSave.textContent = "Saving…";
+    if (settingsStatus) settingsStatus.textContent = "";
+    try {
+      const existing = await bridge.loadCredentials?.() ?? {};
+      const picoKey = settingsPicovoiceKey?.value.trim() ?? "";
+      const elKey = settingsElevenlabsKey?.value.trim() ?? "";
+      const elVoice = settingsElevenlabsVoice?.value.trim() ?? "";
+      const newCreds = { ...existing, gemini_api_key: geminiKey };
+      if (picoKey) newCreds.picovoice_key = picoKey;
+      if (elKey) {
+        newCreds.elevenlabs_api_key = elKey;
+        if (elVoice) newCreds.elevenlabs_voice_id = elVoice;
+        else delete newCreds.elevenlabs_voice_id;
+      } else {
+        delete newCreds.elevenlabs_api_key;
+        delete newCreds.elevenlabs_voice_id;
+      }
+      await bridge.saveCredentials?.(newCreds);
+      if (settingsStatus) settingsStatus.textContent = "Restarting backend…";
+      const restart = await bridge.restartBackend?.() ?? { ok: false };
+      if (settingsStatus) {
+        settingsStatus.textContent = restart.ok
+          ? "Saved. Backend restarted."
+          : "Saved. Backend restart failed — check logs.";
+        if (!restart.ok) settingsStatus.classList.add("error");
+        else settingsStatus.classList.remove("error");
+      }
+    } catch {
+      if (settingsStatus) {
+        settingsStatus.textContent = "Save failed.";
+        settingsStatus.classList.add("error");
+      }
+    } finally {
+      settingsSave.disabled = prevDisabled;
+      settingsSave.textContent = prevLabel;
+    }
+  });
+}
 
 if (openAiStudioLink) {
   openAiStudioLink.addEventListener("click", (e) => {
@@ -1673,6 +1819,11 @@ connectWebSocket();
 startAudioStreaming();
 
 // 3. Run onboarding if first launch
+if (bridge.onSettingsOpen) {
+  bridge.onSettingsOpen(() => {
+    void openSettings();
+  });
+}
 runOnboarding();
 
 /* ══════════════════════════════════════════════════════════════
