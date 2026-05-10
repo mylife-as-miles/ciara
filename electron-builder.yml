@@ -1,0 +1,99 @@
+# Electron Builder — CIARA (desktop app + enterprise-style Windows installer)
+# See: https://www.electron.build/configuration
+
+appId: com.startrz.ciara
+productName: CIARA
+copyright: Copyright © 2026 Startrz Technologies
+
+directories:
+  buildResources: build
+  output: release
+
+asar: true
+
+afterSign: build/notarize.cjs
+
+files:
+  - main.js
+  - preload.js
+  - renderer/**/*
+  - node_modules/**/*
+  - "!node_modules/electron/**"
+  - "!node_modules/electron-builder/**"
+
+extraResources:
+  - from: backend
+    to: backend
+    filter:
+      - "**/*"
+      - "!__pycache__/**"
+      - "!*.pyc"
+      - "!.env"
+  - from: setup.sh
+    to: setup.sh
+  - from: chrome_extension
+    to: chrome_extension
+    filter:
+      - "**/*"
+      - "!*.bak"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  executableName: CIARA
+  signtoolOptions:
+    publisherName: Startrz Technologies
+  requestedExecutionLevel: asInvoker
+  artifactName: CIARA-Setup-${version}.${ext}
+  legalTrademarks: CIARA is a trademark of Startrz Technologies.
+  verifyUpdateCodeSignature: false
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  perMachine: false
+
+  shortcutName: CIARA
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  menuCategory: Startrz Technologies
+
+  installerIcon: build/installerIcon.ico
+  uninstallerIcon: build/installerIcon.ico
+  installerSidebar: build/installerSidebar.bmp
+
+  license: build/license.txt
+  include: build/installer.nsh
+
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+
+mac:
+  icon: build/icon.icns
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - universal
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  identity: null
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+
+dmg:
+  title: CIARA
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications

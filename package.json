@@ -2,13 +2,15 @@
   "name": "ciara",
   "version": "1.0.0",
   "description": "CIARA — Control Intelligence Assistant for Real-time Automation",
-  "author": "CIARA",
+  "author": "Startrz Technologies",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "branding": "node scripts/generate-branding.mjs",
     "build": "electron-builder --mac",
     "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win --x64 --publish never",
+    "build:win": "npm run branding && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --publish never",
+    "build:win:portable": "npm run branding && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win portable --x64 --publish never",
     "build:dmg": "electron-builder --mac dmg",
     "build:dir": "electron-builder --mac dir",
     "build:signed": "electron-builder --mac --universal",
@@ -21,99 +23,10 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "electron": "^36.2.0",
-    "electron-builder": "^25.1.8"
-  },
-  "build": {
-    "appId": "com.ciara.assistant",
-    "productName": "CIARA",
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "afterSign": "build/notarize.cjs",
-    "files": [
-      "main.js",
-      "preload.js",
-      "renderer/**/*",
-      "node_modules/**/*",
-      "!node_modules/electron/**",
-      "!node_modules/electron-builder/**"
-    ],
-    "extraResources": [
-      {
-        "from": "backend",
-        "to": "backend",
-        "filter": [
-          "**/*",
-          "!__pycache__/**",
-          "!*.pyc",
-          "!.env"
-        ]
-      },
-      {
-        "from": "setup.sh",
-        "to": "setup.sh"
-      },
-      {
-        "from": "chrome_extension",
-        "to": "chrome_extension",
-        "filter": [
-          "**/*",
-          "!*.bak"
-        ]
-      }
-    ],
-    "win": {
-      "signAndEditExecutable": false,
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "mac": {
-      "icon": "build/icon.icns",
-      "category": "public.app-category.productivity",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        }
-      ],
-      "darkModeSupport": true,
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "identity": null,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": false
-    },
-    "dmg": {
-      "title": "CIARA",
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    }
+    "electron-builder": "^25.1.8",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
   }
 }
