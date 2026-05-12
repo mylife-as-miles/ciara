@@ -82,7 +82,7 @@ ${endif}
 !insertmacro installApplicationFiles
 
 ${IfNot} ${Silent}
-  DetailPrint "Step 4 of 4: Finalizing - uninstall registry entries, shortcuts, and launch options..."
+  DetailPrint "Step 4 of 4: Finalizing - uninstall registry entries, Start Menu shortcut, optional tasks (desktop / Explorer / PATH), and launch options..."
 ${endif}
 
 !insertmacro registryAddInstallInfo

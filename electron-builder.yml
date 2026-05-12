@@ -59,7 +59,8 @@ nsis:
   perMachine: false
 
   shortcutName: CIARA
-  createDesktopShortcut: always
+  # Desktop shortcut is optional (see build/ciara-nsis-macros.nsh — "Select additional tasks" page).
+  createDesktopShortcut: false
   createStartMenuShortcut: true
   menuCategory: Startrz Technologies
 
