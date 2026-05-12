@@ -2071,6 +2071,14 @@ body {
   color: #475569;
 }
 
+.onboarding-win-callout-text {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #475569;
+  margin: 0;
+}
+
 .onboarding-body .onboarding-win-callout-list li {
   margin-bottom: 8px;
 }

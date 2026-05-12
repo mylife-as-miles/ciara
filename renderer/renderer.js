@@ -1632,7 +1632,7 @@ async function populateSettingsForm() {
   }
   const settingsWinNote = document.getElementById("settings-win-python-note");
   const settingsWinVenv = document.getElementById("settings-win-venv-path");
-  if (settingsWinNote && settingsWinVenv) {
+  if (settingsWinNote) {
     let plat = "";
     try {
       plat = await bridge.getPlatform?.() ?? "";
@@ -1640,11 +1640,13 @@ async function populateSettingsForm() {
       plat = "";
     }
     if (plat === "win32") {
-      try {
-        const vp = String(await bridge.getVenvPath?.() ?? "").trim();
-        settingsWinVenv.textContent = vp || "—";
-      } catch {
-        settingsWinVenv.textContent = "—";
+      if (settingsWinVenv) {
+        try {
+          const vp = String(await bridge.getVenvPath?.() ?? "").trim();
+          settingsWinVenv.textContent = vp || "—";
+        } catch {
+          settingsWinVenv.textContent = "—";
+        }
       }
       settingsWinNote.classList.remove("hidden");
     } else {
