@@ -287,12 +287,8 @@
             </div>
           </div>
           <div id="onboarding-win-callout-step1" class="onboarding-win-callout hidden" role="note">
-            <p class="onboarding-win-callout-title">Windows — local Python setup</p>
-            <ul class="onboarding-win-callout-list">
-              <li>CIARA installs Python packages when you tap <strong>Save &amp; Continue</strong>. You need <a href="#" class="onboarding-inline-link" id="onboarding-python-download-link">Python&nbsp;3.10 or newer</a> with <strong>Add python.exe to PATH</strong> enabled in the installer.</li>
-              <li>If a previous run failed during setup: quit CIARA completely, delete the folder below, then start CIARA again so it can rebuild the environment.<br/>
-                <code id="onboarding-venv-delete-path" class="onboarding-win-path-code">—</code></li>
-            </ul>
+            <p class="onboarding-win-callout-title">Windows Requirement</p>
+            <p class="onboarding-win-callout-text">Requires <a href="#" class="onboarding-inline-link" id="onboarding-python-download-link">Python 3.10 or newer</a> with <strong>Add python.exe to PATH</strong> enabled.</p>
           </div>
           <button type="button" class="onboarding-btn onboarding-btn-gradient" id="onboarding-next-0" disabled>
             <span class="onboarding-btn-label">Save &amp; Continue</span>
@@ -305,11 +301,8 @@
           <div class="onboarding-body">
             <p class="onboarding-step-intro">Setting up CIARA — takes about 60 seconds the first time while Python dependencies install.</p>
             <div id="onboarding-win-callout-step2" class="onboarding-win-callout hidden" role="note">
-              <p class="onboarding-win-callout-title">Windows troubleshooting</p>
-              <ul class="onboarding-win-callout-list">
-                <li>Requires <strong>Python 3.10+</strong> on your PATH — see the note on the previous step or <a href="#" class="onboarding-inline-link" id="onboarding-python-download-link-2">python.org</a>.</li>
-                <li>If <strong>Python environment</strong> or <strong>WebSocket</strong> fails, open <strong>more</strong> below for the log, then try deleting <code id="onboarding-venv-delete-path-2" class="onboarding-win-path-code">—</code> and running CIARA again.</li>
-              </ul>
+              <p class="onboarding-win-callout-title">Windows Requirement</p>
+              <p class="onboarding-win-callout-text">Requires <a href="#" class="onboarding-inline-link" id="onboarding-python-download-link-2">Python 3.10 or newer</a> on your PATH.</p>
             </div>
             <div class="onboarding-checklist">
               <div class="check-item" id="check-python">
@@ -433,8 +426,7 @@
           </div>
 
           <p id="settings-win-python-note" class="settings-win-python-note hidden" role="note">
-            <strong>Windows backend</strong> — CIARA uses a Python virtual environment. Install Python 3.10+ with <strong>Add python.exe to PATH</strong>.
-            To reset setup after failures, quit CIARA and delete: <code id="settings-win-venv-path" class="onboarding-win-path-code">—</code>
+            <strong>Windows Requirement</strong> — Requires <strong>Python 3.10 or newer</strong> with <strong>Add python.exe to PATH</strong> enabled.
           </p>
 
           <p class="settings-status" id="settings-status" aria-live="polite"></p>
