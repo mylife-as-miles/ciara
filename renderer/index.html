@@ -207,7 +207,19 @@
 
     <!-- ═══ Onboarding Modal (first-launch setup) ═══ -->
     <div class="onboarding-overlay hidden" id="onboarding-overlay">
-      <div class="onboarding-card">
+      <div class="onboarding-boot" id="onboarding-boot" role="status" aria-live="polite">
+        <div class="onboarding-boot-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M27 5c3.7 8.5 8.3 13.1 16.7 16.7l-4.8 11.6c-8.5-3.7-13.1-8.3-16.7-16.7L27 5Z" />
+            <path d="M21.8 21.3c8.5 3.7 13.1 8.3 16.7 16.7L27 43c-3.7-8.5-8.3-13.1-16.7-16.7l11.5-5Z" />
+          </svg>
+        </div>
+        <h1 class="onboarding-boot-title">Your Agent is Loading...</h1>
+        <p class="onboarding-boot-subtitle">First launch may take up to 5 minutes. Please wait.</p>
+        <p class="onboarding-boot-version" id="onboarding-boot-version">Version 1.0.0</p>
+      </div>
+
+      <div class="onboarding-card hidden" id="onboarding-card">
         <div class="overlay-window-controls" role="toolbar" aria-label="Window controls">
           <button type="button" class="overlay-window-btn overlay-minimize-btn" id="onboarding-minimize" aria-label="Minimize window">
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
@@ -217,8 +229,8 @@
           <svg class="onboarding-logo" viewBox="0 0 40 40" width="44" height="44">
             <defs>
               <linearGradient id="ob-grad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#007aff"/>
-                <stop offset="100%" stop-color="#5ac8fa"/>
+                <stop offset="0%" stop-color="#c7ff2e"/>
+                <stop offset="100%" stop-color="#84ff00"/>
               </linearGradient>
             </defs>
             <circle cx="20" cy="20" r="19" fill="url(#ob-grad)" opacity="0.10"/>

@@ -1561,6 +1561,9 @@ const onboardingStep1 = document.getElementById("onboarding-step-1");
 const onboardingStep2 = document.getElementById("onboarding-step-2");
 const onboardingStep3 = document.getElementById("onboarding-step-3");
 const onboardingVersion = document.getElementById("onboarding-version");
+const onboardingBoot = document.getElementById("onboarding-boot");
+const onboardingBootVersion = document.getElementById("onboarding-boot-version");
+const onboardingCard = document.getElementById("onboarding-card");
 
 async function hydrateWindowsOnboardingHints() {
   let plat = "";
@@ -1603,11 +1606,23 @@ async function runOnboarding() {
 
   const version = await bridge.getVersion?.() ?? "1.0.0";
   if (onboardingVersion) onboardingVersion.textContent = `v${version}`;
+  if (onboardingBootVersion) onboardingBootVersion.textContent = `Version ${version}`;
 
   await hydrateWindowsOnboardingHints();
 
   setMouseEnabled(true);
+  onboardingBoot?.classList.remove("hidden", "is-dismissing");
+  onboardingCard?.classList.add("hidden");
   onboardingOverlay.classList.remove("hidden");
+  window.setTimeout(() => {
+    onboardingBoot?.classList.add("is-dismissing");
+    window.setTimeout(() => {
+      onboardingBoot?.classList.add("hidden");
+      onboardingBoot?.classList.remove("is-dismissing");
+      onboardingCard?.classList.remove("hidden");
+      geminiKeyInput?.focus();
+    }, 360);
+  }, 1800);
 }
 
 // ── Step 1: API Key entry ──

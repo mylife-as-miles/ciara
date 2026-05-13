@@ -2981,3 +2981,316 @@ body {
 .onboarding-btn.secondary:active {
   background: rgba(255, 255, 255, 0.45);
 }
+
+/* First-launch black/lime onboarding theme */
+.onboarding-overlay {
+  --onboarding-bg: #111111;
+  --onboarding-panel: #080a06;
+  --onboarding-panel-2: #10130b;
+  --onboarding-lime: #b8ff2c;
+  --onboarding-lime-2: #8cff00;
+  --onboarding-text: #f7f7f2;
+  --onboarding-muted: #a5aa9b;
+  --onboarding-border: rgba(184, 255, 44, 0.22);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--onboarding-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: auto;
+}
+
+.onboarding-boot {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 24px 72px;
+  text-align: center;
+  color: var(--onboarding-text);
+  background: #111111;
+  animation: onboarding-boot-in 0.5s ease both;
+}
+
+.onboarding-boot.is-dismissing {
+  animation: onboarding-boot-out 0.36s ease both;
+}
+
+.onboarding-boot-mark {
+  width: 78px;
+  height: 78px;
+  margin-bottom: 18px;
+  color: var(--onboarding-lime);
+  transform: rotate(-20deg);
+  filter: drop-shadow(0 0 18px rgba(184, 255, 44, 0.36));
+  animation: onboarding-boot-pulse 1.4s ease-in-out infinite;
+}
+
+.onboarding-boot-mark svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.onboarding-boot-title {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #ffffff;
+}
+
+.onboarding-boot-subtitle {
+  margin: 8px 0 0;
+  color: #b7beaa;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.onboarding-boot-version {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  margin: 0;
+  color: rgba(247, 247, 242, 0.38);
+  font-size: 14px;
+}
+
+.onboarding-overlay .onboarding-card {
+  z-index: 3;
+  width: min(760px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 38px 38px 30px;
+  background:
+    linear-gradient(180deg, rgba(184, 255, 44, 0.045), rgba(184, 255, 44, 0.012)),
+    var(--onboarding-panel);
+  border: 1px solid var(--onboarding-border);
+  border-radius: 18px;
+  color: var(--onboarding-text);
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(184, 255, 44, 0.05),
+    inset 0 1px 0 rgba(184, 255, 44, 0.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.onboarding-overlay .onboarding-card::-webkit-scrollbar {
+  width: 5px;
+}
+
+.onboarding-overlay .onboarding-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.onboarding-overlay .onboarding-card::-webkit-scrollbar-thumb {
+  background: rgba(184, 255, 44, 0.32);
+  border-radius: 999px;
+}
+
+.onboarding-overlay .onboarding-header {
+  margin-bottom: 28px;
+}
+
+.onboarding-overlay .onboarding-logo {
+  color: var(--onboarding-lime);
+  filter: drop-shadow(0 0 16px rgba(184, 255, 44, 0.34));
+}
+
+.onboarding-overlay .onboarding-title {
+  color: #ffffff;
+  font-size: 28px;
+  letter-spacing: 0;
+}
+
+.onboarding-overlay .onboarding-expanded-name,
+.onboarding-overlay .onboarding-subtitle,
+.onboarding-overlay .onboarding-tagline,
+.onboarding-overlay .onboarding-body p,
+.onboarding-overlay .onboarding-body .onboarding-step-intro,
+.onboarding-overlay .onboarding-ext-desc,
+.onboarding-overlay .onboarding-ext-steps,
+.onboarding-overlay .shortcut-label {
+  color: var(--onboarding-muted) !important;
+}
+
+.onboarding-overlay .onboarding-intro strong,
+.onboarding-overlay .onboarding-body strong,
+.onboarding-overlay .onboarding-ext-title,
+.onboarding-overlay .check-label {
+  color: var(--onboarding-text);
+}
+
+.onboarding-overlay .onboarding-header-rule {
+  background: linear-gradient(90deg, transparent, rgba(184, 255, 44, 0.2), rgba(184, 255, 44, 0.72), rgba(184, 255, 44, 0.2), transparent);
+}
+
+.onboarding-overlay .onboarding-header-rule::after {
+  background: var(--onboarding-lime);
+  opacity: 0.75;
+}
+
+.onboarding-overlay .overlay-window-btn,
+.onboarding-overlay .onboarding-input-row,
+.onboarding-overlay .onboarding-input,
+.onboarding-overlay .onboarding-wake-card,
+.onboarding-overlay .onboarding-elevenlabs,
+.onboarding-overlay .onboarding-win-callout,
+.onboarding-overlay .check-item,
+.onboarding-overlay .onboarding-log-toggle,
+.onboarding-overlay .onboarding-setup-log,
+.onboarding-overlay .onboarding-extension-box,
+.onboarding-overlay .onboarding-ext-btn-secondary,
+.onboarding-overlay .shortcut-row kbd {
+  background: rgba(184, 255, 44, 0.055);
+  border-color: var(--onboarding-border);
+  color: var(--onboarding-text);
+  box-shadow: inset 0 1px 0 rgba(184, 255, 44, 0.08);
+}
+
+.onboarding-overlay .overlay-window-btn {
+  color: rgba(247, 247, 242, 0.7);
+}
+
+.onboarding-overlay .overlay-window-btn:hover,
+.onboarding-overlay .onboarding-log-toggle:hover,
+.onboarding-overlay .onboarding-ext-btn-secondary:hover {
+  background: rgba(184, 255, 44, 0.12);
+  color: #ffffff;
+}
+
+.onboarding-overlay .onboarding-row-icon,
+.onboarding-overlay .onboarding-input-prefix,
+.onboarding-overlay .onboarding-input-suffix,
+.onboarding-overlay .onboarding-elevenlabs-icon,
+.onboarding-overlay .onboarding-wake-icon {
+  color: var(--onboarding-lime);
+}
+
+.onboarding-overlay .onboarding-input {
+  caret-color: var(--onboarding-lime);
+}
+
+.onboarding-overlay .onboarding-input::placeholder {
+  color: rgba(247, 247, 242, 0.42);
+}
+
+.onboarding-overlay .onboarding-input-row:focus-within,
+.onboarding-overlay .onboarding-input:focus {
+  border-color: rgba(184, 255, 44, 0.58);
+  background: rgba(184, 255, 44, 0.085);
+  box-shadow: 0 0 0 3px rgba(184, 255, 44, 0.12);
+}
+
+.onboarding-overlay .onboarding-link,
+.onboarding-overlay .onboarding-inline-link,
+.onboarding-overlay .onboarding-elevenlabs-title,
+.onboarding-overlay .onboarding-wake-title strong,
+.onboarding-overlay .onboarding-optional-pill {
+  color: var(--onboarding-lime);
+}
+
+.onboarding-overlay .onboarding-link:hover,
+.onboarding-overlay .onboarding-inline-link:hover {
+  color: #d6ff73;
+}
+
+.onboarding-overlay .onboarding-optional-pill {
+  background: rgba(184, 255, 44, 0.12);
+  border-color: rgba(184, 255, 44, 0.26);
+}
+
+.onboarding-overlay .onboarding-btn,
+.onboarding-overlay .onboarding-btn-gradient,
+.onboarding-overlay .onboarding-ext-btn.onboarding-btn-gradient {
+  color: #101010;
+  background: linear-gradient(135deg, var(--onboarding-lime) 0%, var(--onboarding-lime-2) 100%);
+  box-shadow:
+    0 10px 28px rgba(184, 255, 44, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.onboarding-overlay .onboarding-btn:hover,
+.onboarding-overlay .onboarding-btn-gradient:hover {
+  filter: brightness(1.06);
+}
+
+.onboarding-overlay .onboarding-btn:disabled {
+  color: rgba(247, 247, 242, 0.42);
+  background: rgba(184, 255, 44, 0.09);
+  border: 1px solid rgba(184, 255, 44, 0.12);
+}
+
+.onboarding-overlay .check-item.ok {
+  border-color: rgba(184, 255, 44, 0.52);
+  background: rgba(184, 255, 44, 0.09);
+}
+
+.onboarding-overlay .check-item.ok .check-icon,
+.onboarding-overlay .check-item.pending .check-icon {
+  color: var(--onboarding-lime);
+  background: rgba(184, 255, 44, 0.12);
+  border-color: rgba(184, 255, 44, 0.28);
+}
+
+.onboarding-overlay .check-item.fail {
+  border-color: rgba(255, 59, 48, 0.5);
+}
+
+.onboarding-overlay .onboarding-setup-log,
+.onboarding-overlay .onboarding-win-path-code,
+.onboarding-overlay .onboarding-ext-steps code {
+  color: #d9ffd0;
+  background: rgba(0, 0, 0, 0.34);
+  border-color: rgba(184, 255, 44, 0.2);
+}
+
+.onboarding-overlay .onboarding-version {
+  color: rgba(247, 247, 242, 0.38);
+}
+
+@keyframes onboarding-boot-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes onboarding-boot-out {
+  to { opacity: 0; transform: scale(1.015); }
+}
+
+@keyframes onboarding-boot-pulse {
+  50% { transform: rotate(-20deg) scale(1.08); }
+}
+
+@media (max-width: 720px) {
+  .onboarding-overlay {
+    padding: 0;
+  }
+
+  .onboarding-overlay .onboarding-card {
+    width: 100vw;
+    min-height: 100vh;
+    max-height: none;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    padding: 48px 20px 24px;
+  }
+
+  .onboarding-boot-title {
+    font-size: 28px;
+  }
+
+  .onboarding-boot-subtitle {
+    font-size: 14px;
+  }
+}
