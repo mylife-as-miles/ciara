@@ -3,6 +3,14 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("overlayAPI", {
   hideWindow: () => ipcRenderer.invoke("overlay:hide"),
   minimizeWindow: () => ipcRenderer.invoke("window:minimize"),
+  toggleMaximizeWindow: () => ipcRenderer.invoke("window:maximize-toggle"),
+  closeWindow: () => ipcRenderer.invoke("window:close"),
+  isWindowMaximized: () => ipcRenderer.invoke("window:is-maximized"),
+  onWindowMaximizedChange: (handler) => {
+    const wrapped = (_, isMaximized) => handler(isMaximized);
+    ipcRenderer.on("window:maximized-change", wrapped);
+    return () => ipcRenderer.removeListener("window:maximized-change", wrapped);
+  },
   enableMouse: () => ipcRenderer.send("enable-mouse"),
   disableMouse: () => ipcRenderer.send("disable-mouse"),
   onStartListening: (handler) => {

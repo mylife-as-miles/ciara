@@ -16,6 +16,10 @@ const WS_URL = "ws://127.0.0.1:8000/ws";
 const bridge = window.overlayAPI || {
   hideWindow: async () => { },
   minimizeWindow: async () => { },
+  toggleMaximizeWindow: async () => false,
+  closeWindow: async () => { },
+  isWindowMaximized: async () => false,
+  onWindowMaximizedChange: () => () => { },
   enableMouse: () => { },
   disableMouse: () => { },
   onStartListening: () => () => { },
@@ -62,6 +66,10 @@ const commandInput = document.getElementById("command-input");
 const commandSend = document.getElementById("command-panel-send");
 const commandClose = document.getElementById("command-panel-close");
 const pillStopBtn = document.getElementById("pill-stop");
+const appWindowControls = document.getElementById("app-window-controls");
+const appWindowMinimize = document.getElementById("app-window-minimize");
+const appWindowMaximize = document.getElementById("app-window-maximize");
+const appWindowClose = document.getElementById("app-window-close");
 
 const settingsOverlay = document.getElementById("settings-overlay");
 const settingsClose = document.getElementById("settings-close");
@@ -317,6 +325,48 @@ function submitCommandPanel() {
   closeCommandPanel();
   dismissAllModals(true);
   setState(State.LOADING, { force: true });
+}
+
+function setWindowMaximizedUI(isMaximized) {
+  if (!appWindowMaximize) return;
+  const maximized = Boolean(isMaximized);
+  appWindowMaximize.classList.toggle("is-maximized", maximized);
+  appWindowMaximize.setAttribute("aria-label", maximized ? "Restore window" : "Maximize window");
+  appWindowMaximize.setAttribute("title", maximized ? "Restore" : "Maximize");
+  appWindowMaximize.querySelector(".window-icon-maximize")?.classList.toggle("hidden", maximized);
+  appWindowMaximize.querySelector(".window-icon-restore")?.classList.toggle("hidden", !maximized);
+}
+
+if (appWindowMinimize) {
+  appWindowMinimize.addEventListener("click", (event) => {
+    event.stopPropagation();
+    void bridge.minimizeWindow?.();
+  });
+}
+
+if (appWindowMaximize) {
+  appWindowMaximize.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    const isMaximized = await bridge.toggleMaximizeWindow?.();
+    setWindowMaximizedUI(isMaximized);
+  });
+}
+
+if (appWindowClose) {
+  appWindowClose.addEventListener("click", (event) => {
+    event.stopPropagation();
+    void bridge.closeWindow?.();
+  });
+}
+
+if (bridge.onWindowMaximizedChange) {
+  bridge.onWindowMaximizedChange((isMaximized) => {
+    setWindowMaximizedUI(isMaximized);
+  });
+}
+
+if (bridge.isWindowMaximized) {
+  bridge.isWindowMaximized().then(setWindowMaximizedUI).catch(() => {});
 }
 
 /* ── Response Card: Streaming Text ── */
@@ -1435,6 +1485,9 @@ function isOverInteractive(event) {
   const x = event.clientX;
   const y = event.clientY;
   const rects = [wrapper.getBoundingClientRect()];
+  if (appWindowControls && !appWindowControls.classList.contains("hidden")) {
+    rects.push(appWindowControls.getBoundingClientRect());
+  }
   if (app.commandPanelOpen && commandPanel && !commandPanel.classList.contains("hidden")) {
     rects.push(commandPanel.getBoundingClientRect());
   }

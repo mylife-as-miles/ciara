@@ -46,6 +46,61 @@ body {
   pointer-events: none;
 }
 
+.app-window-controls {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  pointer-events: auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    0 10px 26px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.app-window-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: rgba(15, 23, 42, 0.56);
+  background: rgba(255, 255, 255, 0.52);
+  cursor: pointer;
+  transition: transform 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.app-window-btn:hover {
+  transform: scale(1.06);
+  color: rgba(15, 23, 42, 0.82);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.app-window-minimize:hover {
+  color: #b7791f;
+}
+
+.app-window-maximize:hover {
+  color: #0f7b3a;
+}
+
+.app-window-close:hover {
+  color: #ffffff;
+  background: #ff3b30;
+}
+
 /* ══════════════════════════════════════════
    THE PILL – Frosted White Look
    ══════════════════════════════════════════ */

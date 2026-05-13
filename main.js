@@ -429,13 +429,15 @@ function createWindow() {
     show: true,
     frame: false,
     transparent: true,
-    resizable: false,
-    movable: false,
+    resizable: true,
+    movable: true,
     hasShadow: false,
     alwaysOnTop: true,
     /** Show on taskbar so the window can be minimized from the OS chrome / taskbar. */
     skipTaskbar: false,
     minimizable: true,
+    maximizable: true,
+    closable: true,
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -446,8 +448,15 @@ function createWindow() {
 
   mainWindow.setAlwaysOnTop(true, WINDOW_LEVEL);
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  mainWindow.setFullScreenable(false);
+  mainWindow.setFullScreenable(true);
   setMousePassthrough(true);
+
+  const sendMaximizedState = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send("window:maximized-change", mainWindow.isMaximized());
+  };
+  mainWindow.on("maximize", sendMaximizedState);
+  mainWindow.on("unmaximize", sendMaximizedState);
 
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
 }
@@ -568,6 +577,25 @@ ipcMain.handle("overlay:hide", () => {
 ipcMain.handle("window:minimize", () => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.minimize();
+});
+
+ipcMain.handle("window:maximize-toggle", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
+  }
+  return mainWindow.isMaximized();
+});
+
+ipcMain.handle("window:is-maximized", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  return mainWindow.isMaximized();
+});
+
+ipcMain.handle("window:close", () => {
+  app.quit();
 });
 
 ipcMain.on("enable-mouse", () => {
