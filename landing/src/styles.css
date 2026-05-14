@@ -749,6 +749,42 @@ h1 span { display: block; }
   font-size: 18px;
 }
 
+.footer-bottom strong { color: var(--lime); }
+
+.legal-shell {
+  width: min(760px, calc(100vw - 32px));
+  min-height: min(720px, calc(100vh - 64px));
+  margin: 32px auto;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(15,18,17,.96), rgba(2,5,4,.96));
+  box-shadow: var(--shadow);
+  padding: clamp(28px, 5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.legal-shell .brand {
+  margin-bottom: 40px;
+}
+
+.legal-shell h1 {
+  font-size: clamp(56px, 8vw, 96px);
+  margin-bottom: 24px;
+}
+
+.legal-shell p {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.legal-shell .download-primary {
+  margin-top: 24px;
+  width: fit-content;
+}
+
 @media (max-width: 1120px) {
   .site-header { grid-template-columns: 1fr auto; }
   .site-header nav { display: none; }
