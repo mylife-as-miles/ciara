@@ -230,7 +230,7 @@ function useLandingMotion(enabled) {
 
     async function boot() {
       if (prefersReduced || !mounted) return;
-      const [{ default: THREE }, { gsap }, { ScrollTrigger }] = await Promise.all([
+      const [THREE, { gsap }, { ScrollTrigger }] = await Promise.all([
         import("three"),
         import("gsap"),
         import("gsap/ScrollTrigger")
