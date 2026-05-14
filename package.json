@@ -19,6 +19,7 @@
     "postinstall": "electron-builder install-app-deps && node scripts/apply-nsis-installsection.mjs"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "katex": "^0.16.37",
     "ws": "^8.19.0"
   },
