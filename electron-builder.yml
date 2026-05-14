@@ -11,6 +11,7 @@ directories:
 
 asar: true
 
+afterPack: scripts/stamp-windows-icon.cjs
 afterSign: build/notarize.cjs
 
 files:
@@ -31,6 +32,8 @@ extraResources:
       - "!.env"
   - from: setup.sh
     to: setup.sh
+  - from: build/icon.ico
+    to: build/icon.ico
   - from: chrome_extension
     to: chrome_extension
     filter:

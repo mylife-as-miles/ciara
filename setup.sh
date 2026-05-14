@@ -53,7 +53,8 @@ info "Setting up CIARA Python environment..."
 if [[ -d "$VENV_DIR" && -f "$VENV_DIR/bin/python3" ]]; then
     info "Virtual environment already exists at $VENV_DIR"
     info "Upgrading packages..."
-    "$VENV_DIR/bin/pip" install --quiet --upgrade -r "$REQUIREMENTS" 2>/dev/null || true
+    "$VENV_DIR/bin/python3" -m pip --disable-pip-version-check --no-input install --quiet --upgrade --no-cache-dir pip setuptools wheel
+    "$VENV_DIR/bin/python3" -m pip --disable-pip-version-check --no-input install --quiet --prefer-binary --no-cache-dir -r "$REQUIREMENTS"
     info "Setup complete!"
     exit 0
 fi
@@ -68,9 +69,9 @@ info "Creating virtual environment..."
 "$PYTHON_BIN" -m venv "$VENV_DIR"
 
 info "Installing dependencies..."
-"$VENV_DIR/bin/pip" install --quiet --upgrade pip
+"$VENV_DIR/bin/python3" -m pip --disable-pip-version-check --no-input install --quiet --upgrade --no-cache-dir pip setuptools wheel
 if [[ -f "$REQUIREMENTS" ]]; then
-    "$VENV_DIR/bin/pip" install --quiet -r "$REQUIREMENTS"
+    "$VENV_DIR/bin/python3" -m pip --disable-pip-version-check --no-input install --quiet --prefer-binary --no-cache-dir -r "$REQUIREMENTS"
 fi
 
 info "Setup complete!"

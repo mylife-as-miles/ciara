@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   toggleMaximizeWindow: () => ipcRenderer.invoke("window:maximize-toggle"),
   closeWindow: () => ipcRenderer.invoke("window:close"),
   isWindowMaximized: () => ipcRenderer.invoke("window:is-maximized"),
+  setOnboardingMode: (active) => ipcRenderer.invoke("window:set-onboarding-mode", Boolean(active)),
   onWindowMaximizedChange: (handler) => {
     const wrapped = (_, isMaximized) => handler(isMaximized);
     ipcRenderer.on("window:maximized-change", wrapped);
@@ -23,6 +24,7 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   },
   logError: (msg) => ipcRenderer.send("log-error", msg),
   logInfo: (msg) => ipcRenderer.send("log-info", msg),
+  openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
 
   // ── Auth / Credentials ──
   loadCredentials: () => ipcRenderer.invoke("auth:load-credentials"),

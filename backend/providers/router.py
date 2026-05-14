@@ -36,9 +36,9 @@ class RouteDecision:
 # ═══════════════════════════════════════════════════════════════
 
 # Gemma 4 via Google AI — exact IDs may evolve; override with GEMINI_*_MODEL env vars.
-FAST_MODEL = "gemma-4-26b-a4b-it"
-POWERFUL_MODEL = "gemma-4-31b-it"
-ROUTING_MODEL = "gemma-4-26b-a4b-it"
+FAST_MODEL = os.environ.get("GEMINI_FAST_MODEL", "gemma-4-26b-a4b-it").strip() or "gemma-4-26b-a4b-it"
+POWERFUL_MODEL = os.environ.get("GEMINI_POWERFUL_MODEL", "gemma-4-31b-it").strip() or "gemma-4-31b-it"
+ROUTING_MODEL = os.environ.get("GEMINI_ROUTING_MODEL", FAST_MODEL).strip() or FAST_MODEL
 
 # The routing prompt that Flash uses to classify requests
 ROUTING_PROMPT = """You are a routing classifier for a desktop AI assistant called CIARA.

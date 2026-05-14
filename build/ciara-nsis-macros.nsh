@@ -11,6 +11,13 @@
 !include "WordFunc.nsh"
 
 !ifndef BUILD_UNINSTALLER
+!ifndef ONE_CLICK
+!define MUI_WELCOMEPAGE_TITLE "Welcome to the CIARA Setup Wizard"
+!define MUI_WELCOMEPAGE_TEXT "The Setup Wizard will install CIARA on your computer.$\r$\n$\r$\nClick Next to continue or Cancel to exit the Setup Wizard."
+!endif
+!endif
+
+!ifndef BUILD_UNINSTALLER
 Var CIARA_TASK_DESKTOP
 Var CIARA_TASK_FILECTX
 Var CIARA_TASK_DIRCTX

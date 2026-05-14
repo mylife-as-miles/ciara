@@ -26,6 +26,7 @@ const bridge = window.overlayAPI || {
   onOverlayHidden: () => () => { },
   logError: () => { },
   logInfo: () => { },
+  openExternal: async () => false,
   loadCredentials: async () => ({}),
   saveCredentials: async () => false,
   restartBackend: async () => ({ ok: false }),
@@ -41,6 +42,18 @@ const bridge = window.overlayAPI || {
   isFirstLaunch: async () => false,
   generateUserId: async () => ({}),
 };
+
+function openExternalUrl(url) {
+  return bridge.openExternal?.(url) ?? Promise.resolve(false);
+}
+
+document.addEventListener("click", (event) => {
+  if (event.defaultPrevented) return;
+  const link = event.target?.closest?.("a[href^='http://'], a[href^='https://']");
+  if (!link) return;
+  event.preventDefault();
+  openExternalUrl(link.href);
+});
 
 /* ── IPC Bridge ── */
 
@@ -66,15 +79,12 @@ const commandInput = document.getElementById("command-input");
 const commandSend = document.getElementById("command-panel-send");
 const commandClose = document.getElementById("command-panel-close");
 const pillStopBtn = document.getElementById("pill-stop");
+const appTitlebar = document.getElementById("app-titlebar");
 const appWindowControls = document.getElementById("app-window-controls");
 const appWindowMinimize = document.getElementById("app-window-minimize");
 const appWindowMaximize = document.getElementById("app-window-maximize");
 const appWindowClose = document.getElementById("app-window-close");
-
 const settingsOverlay = document.getElementById("settings-overlay");
-const settingsClose = document.getElementById("settings-close");
-const settingsMinimize = document.getElementById("settings-minimize");
-const onboardingMinimize = document.getElementById("onboarding-minimize");
 const settingsLinkAistudio = document.getElementById("settings-link-aistudio");
 const settingsLinkPicovoice = document.getElementById("settings-link-picovoice");
 const settingsLinkEleven = document.getElementById("settings-link-eleven");
@@ -176,6 +186,7 @@ const app = {
   runningAgents: 0,
   totalAgents: 0,
   commandPanelOpen: false,
+  commandSending: false,
   currentPlanId: null,  // active plan modal correlation id
   _skipAfterModalShow: false,  // Multi-modal flag: skip individual afterModalShow calls
 };
@@ -303,7 +314,48 @@ function closeCommandPanel({ clear = false } = {}) {
   setMouseEnabled(false);
 }
 
-function submitCommandPanel() {
+function isWebSocketOpen() {
+  return app.ws && app.ws.readyState === WebSocket.OPEN;
+}
+
+function waitForWebSocketOpen(timeoutMs = 12000) {
+  if (isWebSocketOpen()) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const startedAt = Date.now();
+    const check = () => {
+      if (isWebSocketOpen()) {
+        resolve(true);
+        return;
+      }
+
+      if (Date.now() - startedAt >= timeoutMs) {
+        resolve(false);
+        return;
+      }
+
+      window.setTimeout(check, 200);
+    };
+
+    connectWebSocket();
+    check();
+  });
+}
+
+async function ensureBackendConnection() {
+  if (isWebSocketOpen()) return true;
+
+  try {
+    await bridge.startBackend?.();
+  } catch (err) {
+    console.warn("[Backend] startBackend failed before quick command:", err);
+  }
+
+  connectWebSocket();
+  return waitForWebSocketOpen();
+}
+
+async function submitCommandPanel() {
   if (!commandInput) return;
   const text = (commandInput.value || "").trim();
   if (!text) {
@@ -311,22 +363,44 @@ function submitCommandPanel() {
     return;
   }
 
-  if (!app.ws || app.ws.readyState !== WebSocket.OPEN) {
-    showResponseCard("CIARA is not connected. Try again in a moment.");
+  if (app.commandSending) return;
+  app.commandSending = true;
+
+  if (!isWebSocketOpen()) {
+    setState(State.DOING, { text: "Connecting CIARA...", variant: "", force: true });
+  }
+
+  const connected = await ensureBackendConnection();
+  if (!connected) {
+    app.commandSending = false;
+    showResponseCard("CIARA is still starting. Try again once setup finishes.");
+    commandInput.focus();
     return;
   }
 
-  app.ws.send(JSON.stringify({
-    type: "text_input",
-    text,
-  }));
+  try {
+    app.ws.send(JSON.stringify({
+      type: "text_input",
+      text,
+    }));
+  } catch (err) {
+    app.commandSending = false;
+    console.warn("[WS] Quick command send failed:", err);
+    showResponseCard("CIARA disconnected while sending. Try again.");
+    commandInput.focus();
+    return;
+  }
 
   commandInput.value = "";
   closeCommandPanel();
   dismissAllModals(true);
   setState(State.LOADING, { force: true });
+  app.commandSending = false;
 }
 
+/* ── Response Card: Streaming Text ── */
+
+/* ── Lightweight Markdown → HTML renderer (with KaTeX math) ── */
 function setWindowMaximizedUI(isMaximized) {
   if (!appWindowMaximize) return;
   const maximized = Boolean(isMaximized);
@@ -360,18 +434,13 @@ if (appWindowClose) {
 }
 
 if (bridge.onWindowMaximizedChange) {
-  bridge.onWindowMaximizedChange((isMaximized) => {
-    setWindowMaximizedUI(isMaximized);
-  });
+  bridge.onWindowMaximizedChange(setWindowMaximizedUI);
 }
 
 if (bridge.isWindowMaximized) {
   bridge.isWindowMaximized().then(setWindowMaximizedUI).catch(() => {});
 }
 
-/* ── Response Card: Streaming Text ── */
-
-/* ── Lightweight Markdown → HTML renderer (with KaTeX math) ── */
 function renderMarkdown(text) {
   // ── 0. Extract math blocks before any other processing ──
   // We replace them with unique placeholders so markdown processing
@@ -1485,6 +1554,9 @@ function isOverInteractive(event) {
   const x = event.clientX;
   const y = event.clientY;
   const rects = [wrapper.getBoundingClientRect()];
+  if (appTitlebar && !appTitlebar.classList.contains("hidden")) {
+    rects.push(appTitlebar.getBoundingClientRect());
+  }
   if (appWindowControls && !appWindowControls.classList.contains("hidden")) {
     rects.push(appWindowControls.getBoundingClientRect());
   }
@@ -1557,13 +1629,25 @@ window.addEventListener("beforeunload", async () => {
 
 // ── Onboarding Flow ──
 const onboardingOverlay = document.getElementById("onboarding-overlay");
+const onboardingStep0 = document.getElementById("onboarding-step-0");
+const onboardingStepChoice = document.getElementById("onboarding-step-choice");
 const onboardingStep1 = document.getElementById("onboarding-step-1");
+const onboardingStepModel = document.getElementById("onboarding-step-model");
 const onboardingStep2 = document.getElementById("onboarding-step-2");
 const onboardingStep3 = document.getElementById("onboarding-step-3");
+const onboardingStepVoiceSelect = document.getElementById("onboarding-step-voice-select");
+const onboardingStep4 = document.getElementById("onboarding-step-4");
+const onboardingStep5 = document.getElementById("onboarding-step-5");
 const onboardingVersion = document.getElementById("onboarding-version");
 const onboardingBoot = document.getElementById("onboarding-boot");
 const onboardingBootVersion = document.getElementById("onboarding-boot-version");
 const onboardingCard = document.getElementById("onboarding-card");
+const onboardingBack = document.getElementById("onboarding-back");
+const onboardingStart = document.getElementById("onboarding-start");
+const onboardingChoiceApi = document.getElementById("onboarding-choice-api");
+const onboardingSteps = [onboardingStep0, onboardingStepChoice, onboardingStep1, onboardingStepModel, onboardingStep2, onboardingStep3, onboardingStepVoiceSelect, onboardingStep4, onboardingStep5];
+const onboardingProgressDots = Array.from(document.querySelectorAll("[data-onboarding-progress]"));
+let onboardingStepIndex = 0;
 
 async function hydrateWindowsOnboardingHints() {
   let plat = "";
@@ -1595,9 +1679,23 @@ async function hydrateWindowsOnboardingHints() {
     el.dataset.pythonWinWired = "1";
     el.addEventListener("click", (e) => {
       e.preventDefault();
-      window.open("https://www.python.org/downloads/windows/");
+      openExternalUrl("https://www.python.org/downloads/windows/");
     });
   });
+}
+
+function showOnboardingStep(index) {
+  onboardingStepIndex = Math.max(0, Math.min(index, onboardingSteps.length - 1));
+  onboardingSteps.forEach((step, stepIndex) => {
+    step?.classList.toggle("active", stepIndex === onboardingStepIndex);
+  });
+  const progressIndex = onboardingStepIndex - 1;
+  document.getElementById("onboarding-progress-pill")?.classList.toggle("hidden", onboardingStepIndex === 0);
+  onboardingProgressDots.forEach((dot, dotIndex) => {
+    dot.classList.toggle("active", dotIndex === progressIndex);
+    dot.classList.toggle("complete", dotIndex < progressIndex);
+  });
+  onboardingBack?.classList.toggle("hidden", onboardingStepIndex === 0 || onboardingStepIndex >= 7);
 }
 
 async function runOnboarding() {
@@ -1610,9 +1708,11 @@ async function runOnboarding() {
 
   await hydrateWindowsOnboardingHints();
 
+  await bridge.setOnboardingMode?.(true);
   setMouseEnabled(true);
   onboardingBoot?.classList.remove("hidden", "is-dismissing");
   onboardingCard?.classList.add("hidden");
+  showOnboardingStep(0);
   onboardingOverlay.classList.remove("hidden");
   window.setTimeout(() => {
     onboardingBoot?.classList.add("is-dismissing");
@@ -1620,7 +1720,7 @@ async function runOnboarding() {
       onboardingBoot?.classList.add("hidden");
       onboardingBoot?.classList.remove("is-dismissing");
       onboardingCard?.classList.remove("hidden");
-      geminiKeyInput?.focus();
+      onboardingStart?.focus();
     }, 360);
   }, 1800);
 }
@@ -1629,11 +1729,58 @@ async function runOnboarding() {
 const geminiKeyInput = document.getElementById("onboarding-gemini-key");
 const picovoiceKeyInput = document.getElementById("onboarding-picovoice-key");
 const elevenlabsKeyInput = document.getElementById("onboarding-elevenlabs-key");
-const elevenlabsVoiceInput = document.getElementById("onboarding-elevenlabs-voice");
+const elevenlabsStatus = document.getElementById("onboarding-elevenlabs-status");
+const elevenlabsVoiceList = document.getElementById("onboarding-voice-list");
+const elevenlabsVoiceStatus = document.getElementById("onboarding-voice-status");
+const onboardingModelPicker = document.getElementById("onboarding-model-picker");
+const nextModelBtn = document.getElementById("onboarding-next-model");
 const next0Btn = document.getElementById("onboarding-next-0");
 const next0BtnLabel = next0Btn?.querySelector(".onboarding-btn-label");
+const nextWakeBtn = document.getElementById("onboarding-next-wake");
+const nextVoiceBtn = document.getElementById("onboarding-next-voice");
+const nextVoiceBtnLabel = nextVoiceBtn?.querySelector(".onboarding-btn-label");
+const nextVoiceSelectBtn = document.getElementById("onboarding-next-voice-select");
+const nextVoiceSelectBtnLabel = nextVoiceSelectBtn?.querySelector(".onboarding-btn-label");
 const openAiStudioLink = document.getElementById("onboarding-open-aistudio");
 const openElevenlabsLink = document.getElementById("onboarding-open-elevenlabs");
+let onboardingElevenlabsVoices = [];
+let selectedElevenlabsVoiceId = "";
+let selectedGeminiModel = "gemma-4-26b-a4b-it";
+let activeVoicePreviewAudio = null;
+let activeVoicePreviewUrl = "";
+let activeVoicePreviewButton = null;
+
+if (onboardingStart) {
+  onboardingStart.addEventListener("click", () => {
+    showOnboardingStep(1);
+  });
+}
+
+if (onboardingChoiceApi) {
+  onboardingChoiceApi.addEventListener("click", () => {
+    showOnboardingStep(2);
+    geminiKeyInput?.focus();
+  });
+}
+
+if (onboardingModelPicker) {
+  Array.from(onboardingModelPicker.querySelectorAll(".onboarding-model-option")).forEach((option) => {
+    option.addEventListener("click", () => {
+      selectedGeminiModel = option.dataset.modelId || selectedGeminiModel;
+      Array.from(onboardingModelPicker.querySelectorAll(".onboarding-model-option")).forEach((item) => {
+        const selected = item === option;
+        item.classList.toggle("selected", selected);
+        item.setAttribute("aria-checked", selected ? "true" : "false");
+      });
+    });
+  });
+}
+
+if (onboardingBack) {
+  onboardingBack.addEventListener("click", () => {
+    showOnboardingStep(onboardingStepIndex - 1);
+  });
+}
 
 function wireOnboardingPasswordToggle(btn, input, labels) {
   if (!btn || !input) return;
@@ -1663,7 +1810,18 @@ wireOnboardingPasswordToggle(
 
 if (geminiKeyInput) {
   geminiKeyInput.addEventListener("input", () => {
-    if (next0Btn) next0Btn.disabled = geminiKeyInput.value.trim().length < 10;
+    if (next0Btn) next0Btn.disabled = false;
+  });
+}
+
+if (elevenlabsKeyInput) {
+  elevenlabsKeyInput.addEventListener("input", () => {
+    if (nextVoiceBtn) nextVoiceBtn.disabled = false;
+    if (nextVoiceBtnLabel) nextVoiceBtnLabel.textContent = "Continue";
+    if (elevenlabsStatus) {
+      elevenlabsStatus.textContent = "";
+      elevenlabsStatus.classList.remove("error");
+    }
   });
 }
 
@@ -1739,24 +1897,21 @@ function closeSettings() {
 if (settingsLinkAistudio) {
   settingsLinkAistudio.addEventListener("click", (e) => {
     e.preventDefault();
-    window.open("https://aistudio.google.com/app/apikey");
+    openExternalUrl("https://aistudio.google.com/app/apikey");
   });
 }
 if (settingsLinkPicovoice) {
   settingsLinkPicovoice.addEventListener("click", (e) => {
     e.preventDefault();
-    window.open("https://console.picovoice.ai");
+    openExternalUrl("https://console.picovoice.ai");
   });
 }
 if (settingsLinkEleven) {
   settingsLinkEleven.addEventListener("click", (e) => {
     e.preventDefault();
-    window.open("https://elevenlabs.io/app/settings/api-keys");
+    openExternalUrl("https://elevenlabs.io/app/settings/api-keys");
   });
 }
-if (settingsClose) settingsClose.addEventListener("click", () => closeSettings());
-if (settingsMinimize) settingsMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
-if (onboardingMinimize) onboardingMinimize.addEventListener("click", () => void bridge.minimizeWindow?.());
 if (settingsCancel) settingsCancel.addEventListener("click", () => closeSettings());
 
 if (settingsSave) {
@@ -1815,7 +1970,7 @@ if (settingsSave) {
 if (openAiStudioLink) {
   openAiStudioLink.addEventListener("click", (e) => {
     e.preventDefault();
-    window.open("https://aistudio.google.com/app/apikey");
+    openExternalUrl("https://aistudio.google.com/app/apikey");
   });
 }
 
@@ -1823,15 +1978,228 @@ const openPicovoiceLink = document.getElementById("onboarding-open-picovoice");
 if (openPicovoiceLink) {
   openPicovoiceLink.addEventListener("click", (e) => {
     e.preventDefault();
-    window.open("https://console.picovoice.ai");
+    openExternalUrl("https://console.picovoice.ai");
   });
 }
 
 if (openElevenlabsLink) {
   openElevenlabsLink.addEventListener("click", (e) => {
     e.preventDefault();
-    window.open("https://elevenlabs.io/app/settings/api-keys");
+    openExternalUrl("https://elevenlabs.io/app/settings/api-keys");
   });
+}
+
+function setOnboardingStatus(el, message, isError = false) {
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("error", Boolean(isError));
+}
+
+function stopElevenlabsPreview() {
+  if (activeVoicePreviewAudio) {
+    activeVoicePreviewAudio.pause();
+    activeVoicePreviewAudio.src = "";
+    activeVoicePreviewAudio = null;
+  }
+  if (activeVoicePreviewUrl) {
+    URL.revokeObjectURL(activeVoicePreviewUrl);
+    activeVoicePreviewUrl = "";
+  }
+  if (activeVoicePreviewButton) {
+    activeVoicePreviewButton.classList.remove("loading", "playing");
+    activeVoicePreviewButton.disabled = false;
+    activeVoicePreviewButton.textContent = "Preview";
+    activeVoicePreviewButton = null;
+  }
+}
+
+async function getElevenlabsPreviewUrl(voice, apiKey) {
+  const previewUrl = String(voice?.preview_url || voice?.previewUrl || "").trim();
+  if (previewUrl) return { url: previewUrl, revoke: false };
+
+  const voiceId = String(voice?.voice_id || "").trim();
+  if (!voiceId) throw new Error("Voice preview is unavailable.");
+
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+    method: "POST",
+    headers: {
+      "Accept": "audio/mpeg",
+      "Content-Type": "application/json",
+      "xi-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      text: "Hi, I'm CIARA. This is how my voice will sound.",
+      model_id: "eleven_v3",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const body = await response.json();
+      detail = body?.detail?.message || body?.detail || body?.message || "";
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(detail || `Preview failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  return { url: URL.createObjectURL(blob), revoke: true };
+}
+
+async function previewElevenlabsVoice(voice, button) {
+  const apiKey = elevenlabsKeyInput?.value.trim() ?? "";
+  if (!apiKey && !voice?.preview_url && !voice?.previewUrl) {
+    setOnboardingStatus(elevenlabsVoiceStatus, "Enter your ElevenLabs API key to preview voices.", true);
+    elevenlabsKeyInput?.focus();
+    return;
+  }
+
+  if (activeVoicePreviewButton === button && activeVoicePreviewAudio && !activeVoicePreviewAudio.paused) {
+    stopElevenlabsPreview();
+    setOnboardingStatus(elevenlabsVoiceStatus, "Preview stopped.");
+    return;
+  }
+
+  stopElevenlabsPreview();
+  activeVoicePreviewButton = button;
+  button.disabled = true;
+  button.classList.add("loading");
+  button.textContent = "Loading...";
+  setOnboardingStatus(elevenlabsVoiceStatus, `Loading preview for ${voice?.name || "voice"}...`);
+
+  try {
+    const preview = await getElevenlabsPreviewUrl(voice, apiKey);
+    activeVoicePreviewUrl = preview.revoke ? preview.url : "";
+    const audio = new Audio(preview.url);
+    activeVoicePreviewAudio = audio;
+    button.disabled = false;
+    button.classList.remove("loading");
+    button.classList.add("playing");
+    button.textContent = "Stop";
+    setOnboardingStatus(elevenlabsVoiceStatus, `Playing preview for ${voice?.name || "voice"}.`);
+    audio.addEventListener("ended", () => {
+      setOnboardingStatus(elevenlabsVoiceStatus, "Preview finished. Choose one to continue.");
+      stopElevenlabsPreview();
+    }, { once: true });
+    audio.addEventListener("error", () => {
+      setOnboardingStatus(elevenlabsVoiceStatus, "Could not play this voice preview.", true);
+      stopElevenlabsPreview();
+    }, { once: true });
+    await audio.play();
+  } catch (error) {
+    setOnboardingStatus(elevenlabsVoiceStatus, error?.message || "Could not preview this voice.", true);
+    stopElevenlabsPreview();
+  }
+}
+
+async function fetchElevenlabsVoices(apiKey) {
+  const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+    method: "GET",
+    headers: {
+      "Accept": "application/json",
+      "xi-api-key": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const body = await response.json();
+      detail = body?.detail?.message || body?.detail || body?.message || "";
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(detail || `ElevenLabs returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data?.voices) ? data.voices : [];
+}
+
+function renderElevenlabsVoices(voices) {
+  if (!elevenlabsVoiceList) return;
+  stopElevenlabsPreview();
+  elevenlabsVoiceList.textContent = "";
+  selectedElevenlabsVoiceId = voices[0]?.voice_id || "";
+
+  voices.forEach((voice) => {
+    const option = document.createElement("div");
+    option.className = "onboarding-voice-option";
+    option.dataset.voiceId = voice.voice_id || "";
+    option.setAttribute("role", "radio");
+    option.setAttribute("aria-checked", voice.voice_id === selectedElevenlabsVoiceId ? "true" : "false");
+    option.setAttribute("tabindex", "0");
+
+    const initial = document.createElement("span");
+    initial.className = "onboarding-voice-initial";
+    initial.textContent = (voice.name || "V").trim().slice(0, 1).toUpperCase();
+
+    const copy = document.createElement("span");
+    copy.className = "onboarding-voice-copy";
+
+    const name = document.createElement("span");
+    name.className = "onboarding-voice-name";
+    name.textContent = voice.name || "Unnamed voice";
+
+    const meta = document.createElement("span");
+    meta.className = "onboarding-voice-meta";
+    const category = voice.category ? `${voice.category}` : "ElevenLabs voice";
+    const labels = voice.labels && typeof voice.labels === "object"
+      ? Object.values(voice.labels).filter(Boolean).slice(0, 2).join(" · ")
+      : "";
+    meta.textContent = labels ? `${category} · ${labels}` : category;
+
+    const previewButton = document.createElement("button");
+    previewButton.type = "button";
+    previewButton.className = "onboarding-voice-preview";
+    previewButton.textContent = "Preview";
+    previewButton.setAttribute("aria-label", `Preview ${voice.name || "voice"}`);
+
+    copy.append(name, meta);
+    option.append(initial, copy, previewButton);
+
+    const selectVoice = () => {
+      selectedElevenlabsVoiceId = voice.voice_id || "";
+      Array.from(elevenlabsVoiceList.querySelectorAll(".onboarding-voice-option")).forEach((item) => {
+        const selected = item === option;
+        item.classList.toggle("selected", selected);
+        item.setAttribute("aria-checked", selected ? "true" : "false");
+      });
+      if (nextVoiceSelectBtn) nextVoiceSelectBtn.disabled = !selectedElevenlabsVoiceId;
+    };
+
+    option.addEventListener("click", (event) => {
+      if (event.target === previewButton) return;
+      selectVoice();
+    });
+
+    option.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectVoice();
+    });
+
+    previewButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      selectVoice();
+      previewElevenlabsVoice(voice, previewButton);
+    });
+
+    if (voice.voice_id === selectedElevenlabsVoiceId) {
+      option.classList.add("selected");
+    }
+
+    elevenlabsVoiceList.append(option);
+  });
+
+  if (nextVoiceSelectBtn) nextVoiceSelectBtn.disabled = !selectedElevenlabsVoiceId;
 }
 
 if (next0Btn) {
@@ -1846,7 +2214,7 @@ if (next0Btn) {
     const existing = await bridge.loadCredentials?.() ?? {};
     const picoKey = picovoiceKeyInput?.value.trim() ?? "";
     const elKey = elevenlabsKeyInput?.value.trim() ?? "";
-    const elVoice = elevenlabsVoiceInput?.value.trim() ?? "";
+    const elVoice = selectedElevenlabsVoiceId;
     const newCreds = { ...existing, gemini_api_key: geminiKey };
     if (picoKey) newCreds.picovoice_key = picoKey;
     if (elKey) {
@@ -1867,6 +2235,115 @@ if (next0Btn) {
 }
 
 // ── Step 2: Setup checklist ──
+if (next0Btn) {
+  next0Btn.addEventListener("click", (event) => {
+    event.stopImmediatePropagation();
+    const geminiKey = geminiKeyInput?.value.trim() ?? "";
+    if (!geminiKey) {
+      geminiKeyInput?.focus();
+      return;
+    }
+    showOnboardingStep(3);
+    nextModelBtn?.focus();
+  }, true);
+}
+
+if (nextModelBtn) {
+  nextModelBtn.addEventListener("click", async () => {
+    const geminiKey = geminiKeyInput?.value.trim() ?? "";
+    if (!geminiKey) {
+      showOnboardingStep(2);
+      geminiKeyInput?.focus();
+      return;
+    }
+
+    const existing = await bridge.loadCredentials?.() ?? {};
+    await bridge.saveCredentials?.({
+      ...existing,
+      gemini_api_key: geminiKey,
+      gemini_model: selectedGeminiModel,
+    });
+
+    showOnboardingStep(4);
+    picovoiceKeyInput?.focus();
+  });
+}
+
+if (nextWakeBtn) {
+  nextWakeBtn.addEventListener("click", () => {
+    showOnboardingStep(5);
+    elevenlabsKeyInput?.focus();
+  });
+}
+
+if (nextVoiceBtn) {
+  nextVoiceBtn.addEventListener("click", async () => {
+    const geminiKey = geminiKeyInput?.value.trim() ?? "";
+    if (!geminiKey) {
+      showOnboardingStep(2);
+      geminiKeyInput?.focus();
+      return;
+    }
+
+    const elKey = elevenlabsKeyInput?.value.trim() ?? "";
+    if (!elKey) {
+      setOnboardingStatus(elevenlabsStatus, "Enter your ElevenLabs API key to continue.", true);
+      elevenlabsKeyInput?.focus();
+      return;
+    }
+
+    nextVoiceBtn.disabled = true;
+    if (nextVoiceBtnLabel) nextVoiceBtnLabel.textContent = "Loading voices...";
+    setOnboardingStatus(elevenlabsStatus, "Fetching your ElevenLabs voices...");
+
+    try {
+      onboardingElevenlabsVoices = await fetchElevenlabsVoices(elKey);
+      if (!onboardingElevenlabsVoices.length) {
+        throw new Error("No ElevenLabs voices were found for this key.");
+      }
+      renderElevenlabsVoices(onboardingElevenlabsVoices);
+      setOnboardingStatus(elevenlabsVoiceStatus, `${onboardingElevenlabsVoices.length} voices loaded. Choose one to continue.`);
+      showOnboardingStep(6);
+    } catch (error) {
+      setOnboardingStatus(elevenlabsStatus, error?.message || "Could not load ElevenLabs voices. Check your API key.", true);
+      elevenlabsKeyInput?.focus();
+    } finally {
+      nextVoiceBtn.disabled = false;
+      if (nextVoiceBtnLabel) nextVoiceBtnLabel.textContent = "Continue";
+    }
+  });
+}
+
+if (nextVoiceSelectBtn) {
+  nextVoiceSelectBtn.addEventListener("click", async () => {
+    const geminiKey = geminiKeyInput?.value.trim() ?? "";
+    const picoKey = picovoiceKeyInput?.value.trim() ?? "";
+    const elKey = elevenlabsKeyInput?.value.trim() ?? "";
+    if (!selectedElevenlabsVoiceId) {
+      setOnboardingStatus(elevenlabsVoiceStatus, "Choose a voice to continue.", true);
+      return;
+    }
+
+    nextVoiceSelectBtn.disabled = true;
+    if (nextVoiceSelectBtnLabel) nextVoiceSelectBtnLabel.textContent = "Saving...";
+
+    const existing = await bridge.loadCredentials?.() ?? {};
+    const newCreds = {
+      ...existing,
+      gemini_api_key: geminiKey,
+      gemini_model: selectedGeminiModel,
+      elevenlabs_api_key: elKey,
+      elevenlabs_voice_id: selectedElevenlabsVoiceId,
+    };
+    if (picoKey) newCreds.picovoice_key = picoKey;
+    await bridge.saveCredentials?.(newCreds);
+
+    showOnboardingStep(7);
+    runSetupChecklist();
+    if (nextVoiceSelectBtnLabel) nextVoiceSelectBtnLabel.textContent = "Save & Continue";
+  });
+}
+
 const checkPythonEl = document.getElementById("check-python");
 const checkWsEl = document.getElementById("check-ws");
 const checkMicEl = document.getElementById("check-mic");
@@ -1904,7 +2381,14 @@ if (onboardingLogToggle && onboardingLogPanel) {
 if (bridge.onSetupProgress) {
   bridge.onSetupProgress((text) => {
     if (!setupLogEl) return;
-    setupLogEl.textContent = text;
+    const line = String(text || "").trim();
+    if (!line) return;
+    const lines = `${setupLogEl.textContent || ""}\n${line}`
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(-80);
+    setupLogEl.textContent = lines.join("\n");
     if (onboardingLogPanel && typeof text === "string" && text.trim()) {
       onboardingLogPanel.classList.add("is-expanded");
       if (onboardingLogToggle) onboardingLogToggle.setAttribute("aria-expanded", "true");
@@ -1913,6 +2397,7 @@ if (bridge.onSetupProgress) {
 }
 
 async function runSetupChecklist() {
+  if (setupLogEl) setupLogEl.textContent = "";
   // Ensure user_id is generated and merged with saved credentials
   const saved = await bridge.loadCredentials?.() ?? {};
   if (!saved.user_id) {
@@ -1959,8 +2444,7 @@ async function runSetupChecklist() {
 
 if (next2Btn) {
   next2Btn.addEventListener("click", () => {
-    onboardingStep2.classList.remove("active");
-    onboardingStep3.classList.add("active");
+    showOnboardingStep(8);
   });
 }
 
@@ -1968,9 +2452,10 @@ if (next2Btn) {
 const onboardingDone = document.getElementById("onboarding-done");
 
 if (onboardingDone) {
-  onboardingDone.addEventListener("click", () => {
+  onboardingDone.addEventListener("click", async () => {
     onboardingOverlay.classList.add("hidden");
     setMouseEnabled(false);
+    await bridge.setOnboardingMode?.(false);
     setState(State.IDLE, { force: true });
   });
 }

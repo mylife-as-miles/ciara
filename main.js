@@ -6,12 +6,15 @@ const { spawn, spawnSync } = require("node:child_process");
 const {
   app,
   BrowserWindow,
+  Menu,
+  Tray,
   globalShortcut,
   ipcMain,
   screen,
   session,
   shell,
   dialog,
+  nativeImage,
   systemPreferences,
   safeStorage,
 } = require("electron");
@@ -28,6 +31,11 @@ const SETTINGS_HOTKEYS = (process.env.CIARA_SETTINGS_HOTKEY || "CommandOrControl
   .filter(Boolean);
 
 const WINDOW_LEVEL = "screen-saver";
+const APP_USER_MODEL_ID = "com.startrz.ciara";
+
+if (process.platform === "win32") {
+  app.setAppUserModelId(APP_USER_MODEL_ID);
+}
 
 // ── Path resolution (dev vs packaged) ──
 const IS_PACKAGED = app.isPackaged;
@@ -42,6 +50,9 @@ let mainWindow;
 let lastWakeAt = 0;
 let pythonProcess = null;
 let ownsPythonProcess = false;
+let onboardingWindowMode = false;
+let tray = null;
+let isQuitting = false;
 
 const BACKEND_WS_URL = process.env.CIARA_BACKEND_WS_URL || "ws://127.0.0.1:8000/ws";
 const BACKEND_HOST = process.env.CIARA_BACKEND_HOST || "127.0.0.1";
@@ -53,6 +64,28 @@ const BACKEND_READY_SENTINEL = "[Backend] READY";
 const getVenvRoot = () => IS_PACKAGED
   ? path.join(app.getPath("userData"), "venv")
   : path.join(__dirname, "venv");
+
+function getAppIconPath() {
+  if (process.platform === "win32") {
+    const packagedIco = path.join(process.resourcesPath || "", "build", "icon.ico");
+    if (IS_PACKAGED && fs.existsSync(packagedIco)) return packagedIco;
+    return path.join(__dirname, "build", "icon.ico");
+  }
+  return path.join(__dirname, "renderer", "assets", "icon.png");
+}
+
+function getAppIconImage() {
+  const iconPath = getAppIconPath();
+  const image = nativeImage.createFromPath(iconPath);
+  return image.isEmpty() ? iconPath : image;
+}
+
+function getTrayIconImage() {
+  const image = nativeImage.createFromPath(getAppIconPath());
+  if (image.isEmpty()) return image;
+  const size = process.platform === "darwin" ? 18 : 16;
+  return image.resize({ width: size, height: size });
+}
 
 // Bundled Picovoice key — enables the "Hey CIARA" wake word out of the box.
 // Users can replace this with their own key from console.picovoice.ai
@@ -120,6 +153,52 @@ function getVenvPythonPath(venvRoot) {
   return path.join(venvRoot, "bin", "python3");
 }
 
+function getDependencyMarkerPath(venvRoot) {
+  return path.join(venvRoot, ".ciara-deps.json");
+}
+
+function hashFileIfExists(filePath) {
+  if (!fs.existsSync(filePath)) return "";
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function getPythonVersion(pythonPath) {
+  if (!fs.existsSync(pythonPath)) return "";
+  const r = spawnSync(
+    pythonPath,
+    ["-c", "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}')"],
+    { encoding: "utf8", windowsHide: true }
+  );
+  return r.status === 0 ? String(r.stdout || "").trim() : "";
+}
+
+function depsAreFresh(venvRoot, venvPythonPath, requirementsPath) {
+  const markerPath = getDependencyMarkerPath(venvRoot);
+  if (!fs.existsSync(venvPythonPath) || !fs.existsSync(markerPath)) return false;
+  try {
+    const marker = JSON.parse(fs.readFileSync(markerPath, "utf8"));
+    return marker.requirementsHash === hashFileIfExists(requirementsPath)
+      && marker.platform === process.platform
+      && marker.pythonVersion === getPythonVersion(venvPythonPath);
+  } catch {
+    return false;
+  }
+}
+
+function writeDependencyMarker(venvRoot, venvPythonPath, requirementsPath) {
+  try {
+    fs.mkdirSync(venvRoot, { recursive: true });
+    fs.writeFileSync(getDependencyMarkerPath(venvRoot), JSON.stringify({
+      requirementsHash: hashFileIfExists(requirementsPath),
+      platform: process.platform,
+      pythonVersion: getPythonVersion(venvPythonPath),
+      writtenAt: new Date().toISOString(),
+    }, null, 2));
+  } catch (err) {
+    console.warn("[Setup] Could not write dependency marker:", err);
+  }
+}
+
 function sendSetupProgressLine(text) {
   const line = String(text).trim();
   if (!line) return;
@@ -132,10 +211,10 @@ function sendSetupProgressLine(text) {
 /** Windows: find Python 3.10+ on PATH (py launcher or python/python3). */
 function findWindowsPython310() {
   const candidates = [
-    ["py", ["-3.13"]],
     ["py", ["-3.12"]],
     ["py", ["-3.11"]],
     ["py", ["-3.10"]],
+    ["py", ["-3.13"]],
     ["py", ["-3"]],
     ["python3", []],
     ["python", []],
@@ -157,6 +236,47 @@ function findWindowsPython310() {
   return null;
 }
 
+function summarizeCommandOutput(result, max = 900) {
+  const combined = `${result.stderr || ""}\n${result.stdout || ""}`
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(-14)
+    .join("\n");
+  return combined.slice(0, max);
+}
+
+function runPip(venvPy, args, cwd) {
+  return spawnSync(venvPy, [
+    "-m",
+    "pip",
+    "--disable-pip-version-check",
+    "--no-input",
+    ...args,
+  ], {
+    encoding: "utf8",
+    windowsHide: true,
+    cwd,
+    env: {
+      ...process.env,
+      PIP_DISABLE_PIP_VERSION_CHECK: "1",
+      PIP_NO_CACHE_DIR: "1",
+      PIP_NO_INPUT: "1",
+    },
+  });
+}
+
+function installRequirementsWithRetry(venvPy, requirementsPath, cwd) {
+  const common = ["install", "--quiet", "--prefer-binary", "--no-cache-dir", "-r", requirementsPath];
+  let result = runPip(venvPy, common, cwd);
+  if (result.status === 0) return result;
+
+  sendSetupProgressLine(`Dependency install failed, retrying with a clean pip cache: ${summarizeCommandOutput(result, 500)}`);
+  runPip(venvPy, ["cache", "purge"], cwd);
+  result = runPip(venvPy, common, cwd);
+  return result;
+}
+
 /**
  * Windows: create/upgrade venv with `python -m venv` + pip (no bash required).
  * macOS/Linux: still uses setup.sh under bash.
@@ -168,26 +288,19 @@ function runSetupWindows(venvRoot) {
 
   if (fs.existsSync(venvPy)) {
     sendSetupProgressLine("Virtual environment found — upgrading packages…");
-    let r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "--upgrade", "pip"], {
-      encoding: "utf8",
-      windowsHide: true,
-      cwd: projectRoot,
-    });
+    let r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
     if (r.status !== 0) {
-      sendSetupProgressLine(`pip upgrade failed: ${(r.stderr || r.stdout || "").slice(0, 400)}`);
+      sendSetupProgressLine(`pip upgrade failed: ${summarizeCommandOutput(r, 500)}`);
       return false;
     }
     if (fs.existsSync(requirementsPath)) {
-      r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "-r", requirementsPath], {
-        encoding: "utf8",
-        windowsHide: true,
-        cwd: projectRoot,
-      });
+      r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot);
       if (r.status !== 0) {
-        sendSetupProgressLine(`Dependency install failed: ${(r.stderr || r.stdout || "").slice(0, 500)}`);
+        sendSetupProgressLine(`Dependency install failed: ${summarizeCommandOutput(r, 900)}`);
         return false;
       }
     }
+    writeDependencyMarker(venvRoot, venvPy, requirementsPath);
     sendSetupProgressLine("Setup complete!");
     return true;
   }
@@ -219,28 +332,21 @@ function runSetupWindows(venvRoot) {
   }
 
   sendSetupProgressLine("Installing pip and dependencies…");
-  r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "--upgrade", "pip"], {
-    encoding: "utf8",
-    windowsHide: true,
-    cwd: projectRoot,
-  });
+  r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
   if (r.status !== 0) {
-    sendSetupProgressLine(`pip bootstrap failed: ${(r.stderr || r.stdout || "").slice(0, 400)}`);
+    sendSetupProgressLine(`pip bootstrap failed: ${summarizeCommandOutput(r, 500)}`);
     return false;
   }
 
   if (fs.existsSync(requirementsPath)) {
-    r = spawnSync(venvPy, ["-m", "pip", "install", "--quiet", "-r", requirementsPath], {
-      encoding: "utf8",
-      windowsHide: true,
-      cwd: projectRoot,
-    });
+    r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot);
     if (r.status !== 0) {
-      sendSetupProgressLine(`Dependency install failed: ${(r.stderr || r.stdout || "").slice(0, 500)}`);
+      sendSetupProgressLine(`Dependency install failed: ${summarizeCommandOutput(r, 900)}`);
       return false;
     }
   }
 
+  writeDependencyMarker(venvRoot, venvPy, requirementsPath);
   sendSetupProgressLine("Setup complete!");
   return true;
 }
@@ -281,6 +387,9 @@ function runSetup(venvRoot) {
 
     setup.on("close", (code) => {
       console.log(`[Setup] Exited with code ${code}`);
+      if (code === 0) {
+        writeDependencyMarker(venvRoot, getVenvPythonPath(venvRoot), path.join(BACKEND_ROOT, "requirements.txt"));
+      }
       resolve(code === 0);
     });
   });
@@ -289,10 +398,11 @@ function runSetup(venvRoot) {
 async function startPythonBackend() {
   const venvRoot = getVenvRoot();
   const venvPythonPath = getVenvPythonPath(venvRoot);
+  const requirementsPath = path.join(BACKEND_ROOT, "requirements.txt");
   const scriptPath = path.join(BACKEND_ROOT, "servers", "local_server.py");
   const cwd = IS_PACKAGED ? APP_ROOT : __dirname;
 
-  if (!fs.existsSync(venvPythonPath)) {
+  if (!fs.existsSync(venvPythonPath) || !depsAreFresh(venvRoot, venvPythonPath, requirementsPath)) {
     console.log("[Backend] Python venv not found — running setup...");
     const ok = await runSetup(venvRoot);
     if (!ok) {
@@ -313,6 +423,12 @@ async function startPythonBackend() {
   const savedCreds = loadCredentials();
   const spawnEnv = { ...process.env };
   if (savedCreds?.gemini_api_key) spawnEnv.GEMINI_API_KEY = savedCreds.gemini_api_key;
+  const geminiModel = (savedCreds?.gemini_model ?? "").trim();
+  if (geminiModel) {
+    spawnEnv.GEMINI_FAST_MODEL = geminiModel;
+    spawnEnv.GEMINI_POWERFUL_MODEL = geminiModel;
+    spawnEnv.GEMINI_ROUTING_MODEL = geminiModel;
+  }
   // Use saved Picovoice key if set, otherwise fall back to the bundled default
   spawnEnv.PICOVOICE_ACCESS_KEY = savedCreds?.picovoice_key || BUNDLED_PICOVOICE_KEY;
 
@@ -417,9 +533,67 @@ function emitStartListening() {
   mainWindow.webContents.send("start-listening");
 }
 
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+  }
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!onboardingWindowMode) {
+    setOverlayWindowMode();
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function openSettingsWindow() {
+  showMainWindow();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once("did-finish-load", () => {
+      mainWindow?.webContents.send("settings:open");
+    });
+    return;
+  }
+  mainWindow.webContents.send("settings:open");
+}
+
+function createTray() {
+  if (tray) return tray;
+
+  tray = new Tray(getTrayIconImage());
+  tray.setToolTip("CIARA");
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: "Open CIARA", click: () => wakeOverlay() },
+    { label: "Settings", click: () => openSettingsWindow() },
+    { type: "separator" },
+    {
+      label: "Restart Backend",
+      click: async () => {
+        stopPythonBackend();
+        await sleep(500);
+        startPythonBackend();
+      },
+    },
+    { type: "separator" },
+    {
+      label: "Quit CIARA",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]));
+  tray.on("click", () => wakeOverlay());
+  tray.on("double-click", () => wakeOverlay());
+  return tray;
+}
+
 function createWindow() {
   const display = screen.getPrimaryDisplay();
   const { width, height } = display.workAreaSize;
+  const windowIcon = getAppIconImage();
+  const firstLaunch = !hasUsableCredentials();
+  onboardingWindowMode = firstLaunch;
 
   mainWindow = new BrowserWindow({
     width: width,
@@ -428,16 +602,18 @@ function createWindow() {
     y: display.workArea.y,
     show: true,
     frame: false,
+    titleBarStyle: "hidden",
     transparent: true,
     resizable: true,
     movable: true,
     hasShadow: false,
-    alwaysOnTop: true,
+    alwaysOnTop: !firstLaunch,
     /** Show on taskbar so the window can be minimized from the OS chrome / taskbar. */
     skipTaskbar: false,
     minimizable: true,
     maximizable: true,
     closable: true,
+    icon: windowIcon,
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -446,10 +622,16 @@ function createWindow() {
     }
   });
 
-  mainWindow.setAlwaysOnTop(true, WINDOW_LEVEL);
-  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (typeof mainWindow.setIcon === "function") {
+    mainWindow.setIcon(windowIcon);
+  }
+
+  if (firstLaunch) {
+    setNormalWindowMode();
+  } else {
+    setOverlayWindowMode();
+  }
   mainWindow.setFullScreenable(true);
-  setMousePassthrough(true);
 
   const sendMaximizedState = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -457,8 +639,29 @@ function createWindow() {
   };
   mainWindow.on("maximize", sendMaximizedState);
   mainWindow.on("unmaximize", sendMaximizedState);
+  mainWindow.on("close", (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    mainWindow.hide();
+  });
 
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+}
+
+function setOverlayWindowMode() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  onboardingWindowMode = false;
+  mainWindow.setAlwaysOnTop(true, WINDOW_LEVEL);
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  setMousePassthrough(true);
+}
+
+function setNormalWindowMode() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  onboardingWindowMode = true;
+  mainWindow.setAlwaysOnTop(false);
+  mainWindow.setVisibleOnAllWorkspaces(false);
+  setMousePassthrough(false);
 }
 
 function centerNearTop() {
@@ -470,9 +673,8 @@ function centerNearTop() {
 }
 
 function wakeOverlay() {
-  if (!mainWindow) return;
   lastWakeAt = Date.now();
-  mainWindow.show();
+  showMainWindow();
   emitStartListening();
 }
 
@@ -552,6 +754,7 @@ app.whenReady().then(async () => {
 
   // Create window first so setup:progress events can reach the renderer
   createWindow();
+  createTray();
   registerHotkey();
 
   // Returning user (credentials valid): start backend immediately with saved API keys.
@@ -565,6 +768,7 @@ app.whenReady().then(async () => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+      createTray();
       registerHotkey();
     }
   });
@@ -594,8 +798,18 @@ ipcMain.handle("window:is-maximized", () => {
   return mainWindow.isMaximized();
 });
 
+ipcMain.handle("window:set-onboarding-mode", (event, active) => {
+  if (active) {
+    setNormalWindowMode();
+  } else {
+    setOverlayWindowMode();
+  }
+  return true;
+});
+
 ipcMain.handle("window:close", () => {
-  app.quit();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.hide();
 });
 
 ipcMain.on("enable-mouse", () => {
@@ -770,6 +984,17 @@ ipcMain.handle("extension:reveal", () => {
 ipcMain.handle("extension:open-chrome-extensions", () => {
   shell.openExternal("https://support.google.com/chrome_webstore/answer/2664769");
   return true;
+});
+
+ipcMain.handle("app:open-external", async (_event, rawUrl) => {
+  try {
+    const url = new URL(String(rawUrl || ""));
+    if (!["https:", "http:"].includes(url.protocol)) return false;
+    await shell.openExternal(url.toString());
+    return true;
+  } catch {
+    return false;
+  }
 });
 
 app.on("will-quit", () => {
