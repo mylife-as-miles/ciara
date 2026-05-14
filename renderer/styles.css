@@ -46,6 +46,18 @@ body {
   pointer-events: none;
 }
 
+body.assistant-overlay-mode .app-titlebar {
+  display: none;
+}
+
+body.assistant-overlay-mode .stage {
+  padding-top: 28px;
+}
+
+body.normal-window-mode .app-titlebar {
+  display: flex;
+}
+
 .app-titlebar {
   position: fixed;
   top: 0;

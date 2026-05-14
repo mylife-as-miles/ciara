@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   closeWindow: () => ipcRenderer.invoke("window:close"),
   isWindowMaximized: () => ipcRenderer.invoke("window:is-maximized"),
   setOnboardingMode: (active) => ipcRenderer.invoke("window:set-onboarding-mode", Boolean(active)),
+  onWindowModeChange: (handler) => {
+    const wrapped = (_, mode) => handler(mode);
+    ipcRenderer.on("window:mode-change", wrapped);
+    return () => ipcRenderer.removeListener("window:mode-change", wrapped);
+  },
   onWindowMaximizedChange: (handler) => {
     const wrapped = (_, isMaximized) => handler(isMaximized);
     ipcRenderer.on("window:maximized-change", wrapped);

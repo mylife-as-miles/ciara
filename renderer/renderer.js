@@ -84,6 +84,14 @@ const appWindowControls = document.getElementById("app-window-controls");
 const appWindowMinimize = document.getElementById("app-window-minimize");
 const appWindowMaximize = document.getElementById("app-window-maximize");
 const appWindowClose = document.getElementById("app-window-close");
+
+function setWindowModeClass(mode) {
+  const normal = mode === "normal";
+  document.body.classList.toggle("normal-window-mode", normal);
+  document.body.classList.toggle("assistant-overlay-mode", !normal);
+}
+
+setWindowModeClass("assistant-overlay");
 const settingsOverlay = document.getElementById("settings-overlay");
 const settingsLinkAistudio = document.getElementById("settings-link-aistudio");
 const settingsLinkPicovoice = document.getElementById("settings-link-picovoice");
@@ -162,6 +170,7 @@ const app = {
   detectedApp: "",
   actionMessage: "Processing...",
   autoResetTimer: null,
+  workWatchdogTimer: null,
   streamTimer: null,       // Character-by-character typing interval
   streamQueue: "",         // Text waiting to be streamed
   streamIndex: 0,          // Current position in stream
@@ -204,6 +213,23 @@ function switchContent(target) {
   target.classList.add('active');
 }
 
+function clearWorkWatchdog() {
+  if (!app.workWatchdogTimer) return;
+  clearTimeout(app.workWatchdogTimer);
+  app.workWatchdogTimer = null;
+}
+
+function armWorkWatchdog(label = "CIARA") {
+  clearWorkWatchdog();
+  app.workWatchdogTimer = setTimeout(() => {
+    app.workWatchdogTimer = null;
+    try {
+      cancelActiveTask();
+    } catch {}
+    showResponseCard(`${label} took too long to respond. The task was stopped so the overlay does not stay loading forever.`);
+  }, 120000);
+}
+
 /** Truncate text to a maximum number of words */
 function truncateToWords(text, max = 2) {
   const words = (text || '').trim().split(/\s+/);
@@ -214,6 +240,12 @@ function truncateToWords(text, max = 2) {
 function setState(next, { tier = "", text = null, appName = "", iconUrl = "", force = false, variant = "" } = {}) {
   if (!force && app.current === next) return;
   app.current = next;
+
+  if (next === State.LOADING || next === State.DOING) {
+    armWorkWatchdog(next === State.DOING ? (text || "CIARA") : "CIARA");
+  } else {
+    clearWorkWatchdog();
+  }
 
   // Clear any previous variant class
   wrapper.classList.remove('variant-browsing', 'variant-typing', 'variant-searching', 'variant-executing', 'variant-planning');
@@ -1535,6 +1567,10 @@ function connectWebSocket() {
       if (bridge.logError) {
         bridge.logError(`WebSocket closed: ${e.code} ${e.reason}`);
       }
+      if (app.current === State.LOADING || app.current === State.DOING) {
+        clearWorkWatchdog();
+        showResponseCard("CIARA disconnected while working. Reconnecting...");
+      }
       scheduleReconnect();
     });
   } catch {
@@ -2513,6 +2549,11 @@ startAudioStreaming();
 if (bridge.onSettingsOpen) {
   bridge.onSettingsOpen(() => {
     void openSettings();
+  });
+}
+if (bridge.onWindowModeChange) {
+  bridge.onWindowModeChange((mode) => {
+    setWindowModeClass(mode);
   });
 }
 runOnboarding();

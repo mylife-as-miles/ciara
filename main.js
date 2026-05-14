@@ -53,6 +53,7 @@ let ownsPythonProcess = false;
 let onboardingWindowMode = false;
 let tray = null;
 let isQuitting = false;
+let backendStartPromise = null;
 
 const BACKEND_WS_URL = process.env.CIARA_BACKEND_WS_URL || "ws://127.0.0.1:8000/ws";
 const BACKEND_HOST = process.env.CIARA_BACKEND_HOST || "127.0.0.1";
@@ -396,6 +397,19 @@ function runSetup(venvRoot) {
 }
 
 async function startPythonBackend() {
+  if (backendStartPromise) {
+    return backendStartPromise;
+  }
+
+  backendStartPromise = startPythonBackendInner()
+    .finally(() => {
+      backendStartPromise = null;
+    });
+
+  return backendStartPromise;
+}
+
+async function startPythonBackendInner() {
   const venvRoot = getVenvRoot();
   const venvPythonPath = getVenvPythonPath(venvRoot);
   const requirementsPath = path.join(BACKEND_ROOT, "requirements.txt");
@@ -511,6 +525,7 @@ async function startPythonBackend() {
 }
 
 function stopPythonBackend() {
+  backendStartPromise = null;
   if (pythonProcess && ownsPythonProcess) {
     console.log("[Backend] Stopping Python server...");
     pythonProcess.kill('SIGTERM');
@@ -602,14 +617,12 @@ function createWindow() {
     y: display.workArea.y,
     show: true,
     frame: false,
-    titleBarStyle: "hidden",
     transparent: true,
     resizable: true,
     movable: true,
     hasShadow: false,
     alwaysOnTop: !firstLaunch,
-    /** Show on taskbar so the window can be minimized from the OS chrome / taskbar. */
-    skipTaskbar: false,
+    skipTaskbar: !firstLaunch,
     minimizable: true,
     maximizable: true,
     closable: true,
@@ -651,17 +664,27 @@ function createWindow() {
 function setOverlayWindowMode() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   onboardingWindowMode = false;
+  mainWindow.setSkipTaskbar(true);
+  mainWindow.setResizable(false);
+  mainWindow.setMinimizable(false);
+  mainWindow.setMaximizable(false);
   mainWindow.setAlwaysOnTop(true, WINDOW_LEVEL);
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   setMousePassthrough(true);
+  mainWindow.webContents.send("window:mode-change", "assistant-overlay");
 }
 
 function setNormalWindowMode() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   onboardingWindowMode = true;
+  mainWindow.setSkipTaskbar(false);
+  mainWindow.setResizable(true);
+  mainWindow.setMinimizable(true);
+  mainWindow.setMaximizable(true);
   mainWindow.setAlwaysOnTop(false);
   mainWindow.setVisibleOnAllWorkspaces(false);
   setMousePassthrough(false);
+  mainWindow.webContents.send("window:mode-change", "normal");
 }
 
 function centerNearTop() {

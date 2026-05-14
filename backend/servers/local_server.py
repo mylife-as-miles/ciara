@@ -25,6 +25,8 @@ from dotenv import load_dotenv
 # Force print to flush immediately so Electron gets the logs in real-time
 print = partial(print, flush=True)
 
+AGENT_TEXT_TIMEOUT_SECONDS = int(os.getenv("CIARA_AGENT_TEXT_TIMEOUT_SECONDS", "180"))
+
 # Ensure the backend package root is on sys.path so 'agent', 'tools', etc. resolve
 # regardless of the working directory (Electron launches with cwd = project root).
 _backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -554,7 +556,31 @@ async def main_handler(websocket):
                         await websocket.send(json.dumps({
                             "type": "progress", "state": "state-loading"
                         }))
-                        await assistant.run_agent_text(websocket, text)
+                        try:
+                            await asyncio.wait_for(
+                                assistant.run_agent_text(websocket, text),
+                                timeout=AGENT_TEXT_TIMEOUT_SECONDS,
+                            )
+                        except asyncio.TimeoutError:
+                            print(f"[Backend] text_input timed out after {AGENT_TEXT_TIMEOUT_SECONDS}s")
+                            assistant.state = "IDLE"
+                            assistant.waiting_for_reply = False
+                            assistant.audio_buffer = bytearray()
+                            await websocket.send(json.dumps({
+                                "type": "response",
+                                "payload": {"text": "CIARA took too long to respond, so I stopped that task.", "app": ""}
+                            }))
+                            await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
+                        except Exception as e:
+                            print(f"[Backend] text_input error: {e}")
+                            assistant.state = "IDLE"
+                            assistant.waiting_for_reply = False
+                            assistant.audio_buffer = bytearray()
+                            await websocket.send(json.dumps({
+                                "type": "response",
+                                "payload": {"text": "CIARA hit an internal error while processing that request.", "app": ""}
+                            }))
+                            await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
                 elif msg_type == "user_action":
                     mapped_text = _map_user_action_to_text(data.get("action", ""))
                     if mapped_text:
@@ -562,7 +588,31 @@ async def main_handler(websocket):
                         await websocket.send(json.dumps({
                             "type": "progress", "state": "state-loading"
                         }))
-                        await assistant.run_agent_text(websocket, mapped_text)
+                        try:
+                            await asyncio.wait_for(
+                                assistant.run_agent_text(websocket, mapped_text),
+                                timeout=AGENT_TEXT_TIMEOUT_SECONDS,
+                            )
+                        except asyncio.TimeoutError:
+                            print(f"[Backend] user_action timed out after {AGENT_TEXT_TIMEOUT_SECONDS}s")
+                            assistant.state = "IDLE"
+                            assistant.waiting_for_reply = False
+                            assistant.audio_buffer = bytearray()
+                            await websocket.send(json.dumps({
+                                "type": "response",
+                                "payload": {"text": "CIARA took too long to respond, so I stopped that task.", "app": ""}
+                            }))
+                            await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
+                        except Exception as e:
+                            print(f"[Backend] user_action error: {e}")
+                            assistant.state = "IDLE"
+                            assistant.waiting_for_reply = False
+                            assistant.audio_buffer = bytearray()
+                            await websocket.send(json.dumps({
+                                "type": "response",
+                                "payload": {"text": "CIARA hit an internal error while processing that request.", "app": ""}
+                            }))
+                            await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
                 elif msg_type == "browser_debug_action":
                     query = (data.get("query") or "").strip()
                     action = (data.get("action") or "click").strip().lower()
