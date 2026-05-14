@@ -101,3 +101,9 @@ dmg:
       y: 220
       type: link
       path: /Applications
+
+publish:
+  provider: github
+  owner: mylife-as-miles
+  repo: ciara
+  releaseType: release

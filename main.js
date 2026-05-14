@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const net = require("node:net");
 const crypto = require("node:crypto");
 const { spawn, spawnSync } = require("node:child_process");
+const { autoUpdater } = require("electron-updater");
 const {
   app,
   BrowserWindow,
@@ -772,6 +773,69 @@ async function configureMicrophonePermissions() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  Auto-Updater (electron-updater → GitHub Releases)
+// ═══════════════════════════════════════════════════════════════
+
+function initAutoUpdater() {
+  // Don't auto-download — let the user decide when to install
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    console.log("[Updater] Checking for updates…");
+    sendToRenderer("updater:status", "checking");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    console.log(`[Updater] Update available: v${info.version}`);
+    sendToRenderer("updater:status", "available", {
+      version: info.version,
+      releaseNotes: info.releaseNotes || "",
+      releaseDate: info.releaseDate || "",
+    });
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    console.log(`[Updater] Already on latest: v${info.version}`);
+    sendToRenderer("updater:status", "up-to-date", { version: info.version });
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    console.log(`[Updater] Downloading: ${Math.round(progress.percent)}%`);
+    sendToRenderer("updater:status", "downloading", {
+      percent: progress.percent,
+      bytesPerSecond: progress.bytesPerSecond,
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log(`[Updater] Update downloaded: v${info.version}`);
+    sendToRenderer("updater:status", "downloaded", { version: info.version });
+  });
+
+  autoUpdater.on("error", (err) => {
+    console.error("[Updater] Error:", err.message);
+    sendToRenderer("updater:status", "error", { message: err.message });
+  });
+
+  // Check for updates after a short delay (don't slow down startup)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.warn("[Updater] Initial check failed:", err.message);
+    });
+  }, 5000);
+}
+
+/** Helper to safely send events to the renderer. */
+function sendToRenderer(channel, ...args) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, ...args);
+  }
+}
+
 app.whenReady().then(async () => {
   await configureMicrophonePermissions();
 
@@ -779,6 +843,9 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   registerHotkey();
+
+  // Initialise auto-updater (checks GitHub Releases in the background)
+  initAutoUpdater();
 
   // Returning user (credentials valid): start backend immediately with saved API keys.
   // First launch / corrupt credentials: renderer shows onboarding first.
@@ -1018,6 +1085,32 @@ ipcMain.handle("app:open-external", async (_event, rawUrl) => {
   } catch {
     return false;
   }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Auto-Updater IPC handlers
+// ═══════════════════════════════════════════════════════════════
+
+ipcMain.handle("updater:check", async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, version: result?.updateInfo?.version };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("updater:download", async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("updater:install", () => {
+  autoUpdater.quitAndInstall(false, true);
 });
 
 app.on("will-quit", () => {
