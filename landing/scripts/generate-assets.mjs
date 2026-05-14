@@ -168,6 +168,22 @@ await writePng("feature-local.png", 640, 360, `
   <text x="383" y="82" fill="#fff" font-size="15" font-family="monospace">CIARA_DATA_DIR / ~/.ciara</text>
 `);
 
+await writePng("footer-core.png", 520, 320, `
+  <rect width="520" height="320" fill="#020403"/>
+  <g filter="url(#glow)">
+    <path d="M258 82l176 78l-176 92l-176-92l176-78Z" fill="#172018" stroke="${lime}" opacity=".9"/>
+    <path d="M82 160v62l176 94l176-94v-62l-176 92l-176-92Z" fill="#0d130d" stroke="${lime}" opacity=".45"/>
+    <g transform="translate(208 115) scale(.95)">${mark}</g>
+  </g>
+  <g stroke="${lime}" opacity=".32">
+    ${Array.from({ length: 26 }, (_, i) => `<path d="M${20 + i * 19} ${286 - (i % 5) * 18}l${70 + (i % 4) * 18}-42" />`).join("")}
+    ${Array.from({ length: 18 }, (_, i) => `<path d="M${430 + (i % 5) * 18} ${80 + i * 10}l-80 ${35 + (i % 4) * 9}" />`).join("")}
+  </g>
+  <g opacity=".55" fill="${lime}">
+    ${Array.from({ length: 48 }, (_, i) => `<circle cx="${(i * 83) % 520}" cy="${(i * 47) % 320}" r="${i % 4 === 0 ? 1.8 : 1}" />`).join("")}
+  </g>
+`);
+
 const miniScenes = [
   ["use-research.png", "Research anything", "Research: Best AI tools for productivity", "M340 165c55-22 92 6 105 55c-55 22-92-6-105-55Z"],
   ["use-forms.png", "Fill forms", "Submit Application", "M364 185l55 105l18-45l50 11l-123-71Z"],
@@ -190,4 +206,3 @@ for (const [name, title, text, shape] of miniScenes) {
     <text x="78" y="232" fill="${lime}" font-size="14" font-weight="900" font-family="Arial">COMMAND. DONE.</text>
   `);
 }
-

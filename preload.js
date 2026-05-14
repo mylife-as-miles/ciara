@@ -7,11 +7,6 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   closeWindow: () => ipcRenderer.invoke("window:close"),
   isWindowMaximized: () => ipcRenderer.invoke("window:is-maximized"),
   setOnboardingMode: (active) => ipcRenderer.invoke("window:set-onboarding-mode", Boolean(active)),
-  onWindowModeChange: (handler) => {
-    const wrapped = (_, mode) => handler(mode);
-    ipcRenderer.on("window:mode-change", wrapped);
-    return () => ipcRenderer.removeListener("window:mode-change", wrapped);
-  },
   onWindowMaximizedChange: (handler) => {
     const wrapped = (_, isMaximized) => handler(isMaximized);
     ipcRenderer.on("window:maximized-change", wrapped);
@@ -66,4 +61,14 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   },
   restartBackend: () => ipcRenderer.invoke("backend:restart"),
   getDataDirPath: () => ipcRenderer.invoke("app:get-data-dir-path"),
+
+  // ── Auto-Updater ──
+  checkForUpdates: () => ipcRenderer.invoke("updater:check"),
+  downloadUpdate: () => ipcRenderer.invoke("updater:download"),
+  installUpdate: () => ipcRenderer.invoke("updater:install"),
+  onUpdaterStatus: (handler) => {
+    const wrapped = (_, status, data) => handler(status, data);
+    ipcRenderer.on("updater:status", wrapped);
+    return () => ipcRenderer.removeListener("updater:status", wrapped);
+  },
 });

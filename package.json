@@ -15,6 +15,8 @@
     "build:dir": "electron-builder --mac dir",
     "build:signed": "electron-builder --mac --universal",
     "release": "electron-builder --mac --universal --publish never",
+    "publish:win": "npm run branding && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --publish always",
+    "publish:mac": "electron-builder --mac --universal --publish always",
     "dist:extension": "node scripts/package-extension.mjs",
     "postinstall": "electron-builder install-app-deps && node scripts/apply-nsis-installsection.mjs"
   },
