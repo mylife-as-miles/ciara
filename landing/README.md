@@ -1,22 +1,26 @@
 # CIARA Landing Page
 
-Static landing page for CIARA.
+React + Vite landing page for CIARA.
 
-Open from the repo root with a local server so the Windows download link can reach `release/CIARA-Setup-1.0.0.exe`:
+## Local development
 
 ```powershell
-cd C:\Users\MILES\Documents\ciara
-.\venv\Scripts\python.exe -m http.server 4173
+cd C:\Users\MILES\Documents\ciara\landing
+npm install
+npm run dev
 ```
 
-Then visit:
+## Production build
+
+```powershell
+npm run build
+npm run preview
+```
+
+The Windows download buttons serve the installer from:
 
 ```text
-http://127.0.0.1:4173/landing/
+public/downloads/CIARA-Setup-1.0.0.exe
 ```
 
-The Windows buttons use:
-
-```text
-../release/CIARA-Setup-1.0.0.exe
-```
+For Vercel, import this `landing` folder as the project root. Vercel will run `npm install`, `npm run build`, and publish `dist`.

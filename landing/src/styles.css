@@ -153,7 +153,7 @@ main { overflow: hidden; }
   position: absolute;
   inset: 76px -4vw 0;
   z-index: -1;
-  background: url("./assets/hero-bg.png") center / cover no-repeat;
+  background: url("/assets/hero-bg.png") center / cover no-repeat;
   opacity: .78;
   mix-blend-mode: screen;
 }
@@ -490,7 +490,7 @@ h1 span { display: block; }
   inset: -60px -2vw;
   z-index: -1;
   background: radial-gradient(circle at 86% 26%, rgba(166,255,0,.25), transparent 32%),
-    url("./assets/hero-bg.png") center / cover no-repeat;
+    url("/assets/hero-bg.png") center / cover no-repeat;
   opacity: .48;
 }
 
@@ -714,6 +714,7 @@ h1 span { display: block; }
   clip-path: polygon(48% 0,65% 33%,100% 46%,65% 63%,48% 100%,31% 63%,0 46%,31% 33%);
 }
 .footer-nav a,
+.footer-nav button,
 .footer-nav span {
   display: block;
   color: var(--text);
@@ -721,7 +722,17 @@ h1 span { display: block; }
   margin: 0 0 22px;
   font-size: 17px;
 }
-.footer-nav a:hover { color: var(--lime); }
+.footer-nav button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.footer-nav a:hover,
+.footer-nav button:hover { color: var(--lime); }
 .footer-core {
   align-self: center;
   width: 100%;
