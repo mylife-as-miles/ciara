@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import * as THREE from "three";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
 const mark = "/assets/ciara-mark.png";
 const windowsDownload = "/downloads/CIARA-Setup-1.0.0.exe";
 
-function Header({ onLegal }) {
+function Header() {
   return (
     <header className="site-header">
       <a className="brand" href="#top" aria-label="CIARA home">
@@ -225,13 +221,24 @@ function Legal({ type, onBack }) {
 function useLandingMotion(enabled) {
   useEffect(() => {
     if (!enabled) return undefined;
+    let mounted = true;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const canvas = document.getElementById("neural-canvas");
     let renderer;
     let frame = 0;
     let cleanup = () => {};
 
-    if (canvas && !prefersReduced) {
+    async function boot() {
+      if (prefersReduced || !mounted) return;
+      const [{ default: THREE }, { gsap }, { ScrollTrigger }] = await Promise.all([
+        import("three"),
+        import("gsap"),
+        import("gsap/ScrollTrigger")
+      ]);
+      if (!mounted) return;
+      gsap.registerPlugin(ScrollTrigger);
+
+      if (canvas) {
       renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
       const scene = new THREE.Scene();
@@ -282,10 +289,8 @@ function useLandingMotion(enabled) {
         material.dispose();
         renderer.dispose();
       };
-    }
+      }
 
-    if (!prefersReduced) {
-      gsap.registerPlugin(ScrollTrigger);
       const ctx = gsap.context(() => {
         gsap.from(".site-header", { y: -80, opacity: 0, duration: 0.9, ease: "power3.out" });
         gsap.from(".hero-copy > *", { y: 34, opacity: 0, duration: 0.9, stagger: 0.08, ease: "power3.out" });
@@ -311,7 +316,14 @@ function useLandingMotion(enabled) {
         cleanup();
       };
     }
-    return cleanup;
+    const booted = boot();
+    return () => {
+      mounted = false;
+      Promise.resolve(booted).then((motionCleanup) => {
+        if (typeof motionCleanup === "function") motionCleanup();
+      });
+      cleanup();
+    };
   }, [enabled]);
 }
 
