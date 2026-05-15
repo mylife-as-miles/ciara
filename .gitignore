@@ -8,6 +8,16 @@ hey_ciara.ppn
 
 dist/
 release/
+build/cache/
 *.dmg
 *.dmg.blockmap
 scripts/blog-*.html
+
+# Build artifacts — bundled Python runtime & pre-built wheels
+build/python/
+wheelhouse/
+
+# Installer binaries
+*.exe
+*.blockmap
+landing/public/downloads/

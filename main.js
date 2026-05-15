@@ -20,16 +20,34 @@ const {
   safeStorage,
 } = require("electron");
 
-const HOTKEYS = (process.env.LIQUID_HOTKEY || "CommandOrControl+Shift+Space,Alt+Space")
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean);
+function parseAcceleratorList(rawValue, fallback) {
+  const source = rawValue || fallback.join(",");
+  const values = [];
+  let current = "";
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const previous = source[i - 1];
+    if ((char === "," && previous !== "+") || char === ";") {
+      if (current.trim()) values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) values.push(current.trim());
+  return values;
+}
+
+const HOTKEYS = parseAcceleratorList(
+  process.env.LIQUID_HOTKEY,
+  ["CommandOrControl+Shift+Space", "Alt+Space"]
+);
 
 /** Open settings (API keys). Comma-separated list allowed. */
-const SETTINGS_HOTKEYS = (process.env.CIARA_SETTINGS_HOTKEY || "CommandOrControl+Comma")
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean);
+const SETTINGS_HOTKEYS = parseAcceleratorList(
+  process.env.CIARA_SETTINGS_HOTKEY,
+  ["CommandOrControl+,"]
+);
 
 const WINDOW_LEVEL = "screen-saver";
 const APP_USER_MODEL_ID = "com.startrz.ciara";
@@ -55,12 +73,14 @@ let onboardingWindowMode = false;
 let tray = null;
 let isQuitting = false;
 let backendStartPromise = null;
+let backendSetupFailureUntil = 0;
 
 const BACKEND_WS_URL = process.env.CIARA_BACKEND_WS_URL || "ws://127.0.0.1:8000/ws";
 const BACKEND_HOST = process.env.CIARA_BACKEND_HOST || "127.0.0.1";
 const BACKEND_PORT = Number(process.env.CIARA_BACKEND_PORT || "8000");
 const BRIDGE_PORT = Number(process.env.CIARA_BROWSER_BRIDGE_PORT || "8765");
 const BACKEND_READY_SENTINEL = "[Backend] READY";
+const BUNDLED_PYTHON_VERSION = "3.12";
 
 // Venv lives in userData for packaged builds (writable, survives app updates)
 const getVenvRoot = () => IS_PACKAGED
@@ -174,6 +194,63 @@ function getPythonVersion(pythonPath) {
   return r.status === 0 ? String(r.stdout || "").trim() : "";
 }
 
+function parsePythonVersion(version) {
+  const match = String(version || "").trim().match(/^(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!match) return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3] || "0"),
+  };
+}
+
+function isSupportedPythonVersion(version) {
+  const parsed = parsePythonVersion(version);
+  if (!parsed || parsed.major !== 3) return false;
+  return parsed.minor >= 10 && parsed.minor <= 13;
+}
+
+function getPythonWheelTag(version) {
+  const parsed = parsePythonVersion(version);
+  if (!parsed || parsed.major !== 3) return "";
+  return `py${parsed.major}${parsed.minor}`;
+}
+
+function getBundledPythonCandidates() {
+  if (process.platform !== "win32") return [];
+  const envPath = process.env.CIARA_BUNDLED_PYTHON;
+  const roots = [
+    IS_PACKAGED ? path.join(APP_ROOT, "python", "win-x64") : path.join(__dirname, "build", "python", "win-x64"),
+    IS_PACKAGED ? path.join(APP_ROOT, "python") : path.join(__dirname, "build", "python"),
+  ];
+  return [
+    envPath,
+    ...roots.flatMap((root) => [
+      path.join(root, "python.exe"),
+      path.join(root, "tools", "python.exe"),
+    ]),
+  ].filter(Boolean);
+}
+
+function getBundledPythonPath() {
+  for (const candidate of getBundledPythonCandidates()) {
+    if (!candidate || !fs.existsSync(candidate)) continue;
+    const version = getPythonVersion(candidate);
+    if (isSupportedPythonVersion(version)) return candidate;
+    console.warn(`[Setup] Ignoring bundled Python ${candidate}; unsupported version ${version || "unknown"}`);
+  }
+  return "";
+}
+
+function getWheelhousePathForPython(pythonPath) {
+  if (process.platform !== "win32") return "";
+  const tag = getPythonWheelTag(getPythonVersion(pythonPath));
+  if (!tag) return "";
+  const base = IS_PACKAGED ? APP_ROOT : __dirname;
+  const candidate = path.join(base, "wheelhouse", `win-x64-${tag}`);
+  return fs.existsSync(candidate) ? candidate : "";
+}
+
 function depsAreFresh(venvRoot, venvPythonPath, requirementsPath) {
   const markerPath = getDependencyMarkerPath(venvRoot);
   if (!fs.existsSync(venvPythonPath) || !fs.existsSync(markerPath)) return false;
@@ -210,13 +287,13 @@ function sendSetupProgressLine(text) {
   }
 }
 
-/** Windows: find Python 3.10+ on PATH (py launcher or python/python3). */
+/** Windows fallback: find Python 3.10-3.13 on PATH (py launcher or python/python3). */
 function findWindowsPython310() {
   const candidates = [
+    ["py", ["-3.13"]],
     ["py", ["-3.12"]],
     ["py", ["-3.11"]],
     ["py", ["-3.10"]],
-    ["py", ["-3.13"]],
     ["py", ["-3"]],
     ["python3", []],
     ["python", []],
@@ -228,10 +305,7 @@ function findWindowsPython310() {
       { encoding: "utf8", windowsHide: true }
     );
     if (r.status !== 0 || !r.stdout) continue;
-    const parts = r.stdout.trim().split(".");
-    const major = parseInt(parts[0], 10);
-    const minor = parseInt(parts[1], 10);
-    if (major === 3 && minor >= 10) {
+    if (isSupportedPythonVersion(r.stdout.trim())) {
       return { cmd, prefix };
     }
   }
@@ -248,7 +322,7 @@ function summarizeCommandOutput(result, max = 900) {
   return combined.slice(0, max);
 }
 
-function runPip(venvPy, args, cwd) {
+function runPip(venvPy, args, cwd, extraEnv = {}) {
   return spawnSync(venvPy, [
     "-m",
     "pip",
@@ -264,16 +338,28 @@ function runPip(venvPy, args, cwd) {
       PIP_DISABLE_PIP_VERSION_CHECK: "1",
       PIP_NO_CACHE_DIR: "1",
       PIP_NO_INPUT: "1",
+      PYTHONUTF8: "1",
+      PYTHONIOENCODING: "utf-8",
+      ...extraEnv,
     },
   });
 }
 
-function installRequirementsWithRetry(venvPy, requirementsPath, cwd) {
-  const common = ["install", "--quiet", "--prefer-binary", "--no-cache-dir", "-r", requirementsPath];
+function installRequirementsWithRetry(venvPy, requirementsPath, cwd, wheelhousePath = "") {
+  const offline = !!wheelhousePath;
+  const common = [
+    "install",
+    "--quiet",
+    "--prefer-binary",
+    "--no-cache-dir",
+    ...(offline ? ["--no-index", "--find-links", wheelhousePath] : []),
+    "-r",
+    requirementsPath,
+  ];
   let result = runPip(venvPy, common, cwd);
   if (result.status === 0) return result;
 
-  sendSetupProgressLine(`Dependency install failed, retrying with a clean pip cache: ${summarizeCommandOutput(result, 500)}`);
+  sendSetupProgressLine(`Dependency install failed, retrying ${offline ? "from bundled wheelhouse" : "with a clean pip cache"}: ${summarizeCommandOutput(result, 500)}`);
   runPip(venvPy, ["cache", "purge"], cwd);
   result = runPip(venvPy, common, cwd);
   return result;
@@ -287,16 +373,39 @@ function runSetupWindows(venvRoot) {
   const requirementsPath = path.join(BACKEND_ROOT, "requirements.txt");
   const projectRoot = IS_PACKAGED ? APP_ROOT : __dirname;
   const venvPy = getVenvPythonPath(venvRoot);
+  let wheelhousePath = "";
 
   if (fs.existsSync(venvPy)) {
-    sendSetupProgressLine("Virtual environment found — upgrading packages…");
-    let r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
-    if (r.status !== 0) {
-      sendSetupProgressLine(`pip upgrade failed: ${summarizeCommandOutput(r, 500)}`);
-      return false;
+    const venvVersion = getPythonVersion(venvPy);
+    wheelhousePath = getWheelhousePathForPython(venvPy);
+    if (!isSupportedPythonVersion(venvVersion)) {
+      sendSetupProgressLine(
+        `Existing Python venv uses ${venvVersion || "an unsupported Python"}; recreating with Python 3.10-3.13…`
+      );
+      try {
+        fs.rmSync(venvRoot, { recursive: true, force: true });
+      } catch (err) {
+        sendSetupProgressLine(`Could not reset unsupported venv at ${venvRoot}: ${err.message}`);
+        return false;
+      }
+    }
+  }
+
+  if (fs.existsSync(venvPy)) {
+    sendSetupProgressLine(wheelhousePath
+      ? `Virtual environment found — installing dependencies from bundled wheelhouse (${path.basename(wheelhousePath)})…`
+      : "Virtual environment found — upgrading packages…"
+    );
+    let r = { status: 0 };
+    if (!wheelhousePath) {
+      r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
+      if (r.status !== 0) {
+        sendSetupProgressLine(`pip upgrade failed: ${summarizeCommandOutput(r, 500)}`);
+        return false;
+      }
     }
     if (fs.existsSync(requirementsPath)) {
-      r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot);
+      r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot, wheelhousePath);
       if (r.status !== 0) {
         sendSetupProgressLine(`Dependency install failed: ${summarizeCommandOutput(r, 900)}`);
         return false;
@@ -307,17 +416,24 @@ function runSetupWindows(venvRoot) {
     return true;
   }
 
-  const found = findWindowsPython310();
-  if (!found) {
+  const bundledPythonPath = getBundledPythonPath();
+  const found = bundledPythonPath ? null : findWindowsPython310();
+  if (!bundledPythonPath && !found) {
     sendSetupProgressLine(
-      "Python 3.10+ not found. Install from python.org and enable “Add python.exe to PATH”, then restart CIARA."
+      "Python runtime not found. CIARA should include bundled Python 3.12; rebuild with npm run prepare:python:win, or install Python 3.13/3.12 with Add python.exe to PATH enabled."
     );
-    console.error("[Setup] No Python 3.10+ found on Windows PATH");
+    console.error("[Setup] No bundled Python and no supported Python 3.10-3.13 found on Windows PATH");
     return false;
   }
 
-  sendSetupProgressLine(`Using ${found.cmd} ${found.prefix.join(" ")} — creating virtual environment…`);
-  let r = spawnSync(found.cmd, [...found.prefix, "-m", "venv", venvRoot], {
+  const createCommand = bundledPythonPath || found.cmd;
+  const createArgs = bundledPythonPath ? ["-m", "venv", venvRoot] : [...found.prefix, "-m", "venv", venvRoot];
+  const sourceLabel = bundledPythonPath
+    ? `bundled Python ${getPythonVersion(bundledPythonPath)}`
+    : `${found.cmd} ${found.prefix.join(" ")}`;
+
+  sendSetupProgressLine(`Using ${sourceLabel} — creating virtual environment…`);
+  let r = spawnSync(createCommand, createArgs, {
     cwd: projectRoot,
     encoding: "utf8",
     windowsHide: true,
@@ -333,15 +449,20 @@ function runSetupWindows(venvRoot) {
     return false;
   }
 
-  sendSetupProgressLine("Installing pip and dependencies…");
-  r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
-  if (r.status !== 0) {
-    sendSetupProgressLine(`pip bootstrap failed: ${summarizeCommandOutput(r, 500)}`);
-    return false;
+  wheelhousePath = getWheelhousePathForPython(venvPy);
+  if (wheelhousePath) {
+    sendSetupProgressLine(`Installing dependencies from bundled wheelhouse (${path.basename(wheelhousePath)})…`);
+  } else {
+    sendSetupProgressLine("Installing pip and dependencies…");
+    r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
+    if (r.status !== 0) {
+      sendSetupProgressLine(`pip bootstrap failed: ${summarizeCommandOutput(r, 500)}`);
+      return false;
+    }
   }
 
   if (fs.existsSync(requirementsPath)) {
-    r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot);
+    r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot, wheelhousePath);
     if (r.status !== 0) {
       sendSetupProgressLine(`Dependency install failed: ${summarizeCommandOutput(r, 900)}`);
       return false;
@@ -411,6 +532,11 @@ async function startPythonBackend() {
 }
 
 async function startPythonBackendInner() {
+  if (backendSetupFailureUntil > Date.now()) {
+    console.warn("[Backend] Previous setup attempt failed recently; waiting before retry.");
+    return false;
+  }
+
   const venvRoot = getVenvRoot();
   const venvPythonPath = getVenvPythonPath(venvRoot);
   const requirementsPath = path.join(BACKEND_ROOT, "requirements.txt");
@@ -422,8 +548,10 @@ async function startPythonBackendInner() {
     const ok = await runSetup(venvRoot);
     if (!ok) {
       console.error("[Backend] Setup failed — cannot start backend");
+      backendSetupFailureUntil = Date.now() + 60000;
       return false;
     }
+    backendSetupFailureUntil = 0;
   }
 
   if (await canReachBackend()) {
@@ -436,7 +564,11 @@ async function startPythonBackendInner() {
 
   // Load saved credentials and inject API keys into Python's environment
   const savedCreds = loadCredentials();
-  const spawnEnv = { ...process.env };
+  const spawnEnv = {
+    ...process.env,
+    PYTHONUTF8: "1",
+    PYTHONIOENCODING: "utf-8",
+  };
   if (savedCreds?.gemini_api_key) spawnEnv.GEMINI_API_KEY = savedCreds.gemini_api_key;
   const geminiModel = (savedCreds?.gemini_model ?? "").trim();
   if (geminiModel) {
@@ -713,9 +845,14 @@ function registerHotkey() {
   let registeredCount = 0;
 
   for (const accelerator of HOTKEYS) {
-    const ok = globalShortcut.register(accelerator, () => {
-      wakeOverlay();
-    });
+    let ok = false;
+    try {
+      ok = globalShortcut.register(accelerator, () => {
+        wakeOverlay();
+      });
+    } catch (err) {
+      console.error(`Failed to register global shortcut: ${accelerator}`, err);
+    }
     if (ok) {
       registeredCount += 1;
     } else {
@@ -724,12 +861,17 @@ function registerHotkey() {
   }
 
   for (const accelerator of SETTINGS_HOTKEYS) {
-    const ok = globalShortcut.register(accelerator, () => {
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-      mainWindow.show();
-      mainWindow.focus();
-      mainWindow.webContents.send("settings:open");
-    });
+    let ok = false;
+    try {
+      ok = globalShortcut.register(accelerator, () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.webContents.send("settings:open");
+      });
+    } catch (err) {
+      console.error(`Failed to register settings shortcut: ${accelerator}`, err);
+    }
     if (ok) {
       registeredCount += 1;
     } else {

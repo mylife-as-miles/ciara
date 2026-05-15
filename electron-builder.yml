@@ -34,6 +34,14 @@ extraResources:
     to: setup.sh
   - from: build/icon.ico
     to: build/icon.ico
+  - from: build/python/win-x64
+    to: python/win-x64
+    filter:
+      - "**/*"
+  - from: wheelhouse
+    to: wheelhouse
+    filter:
+      - "**/*"
   - from: chrome_extension
     to: chrome_extension
     filter:
