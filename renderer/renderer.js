@@ -165,6 +165,10 @@ const app = {
   reconnectTimer: null,
   reconnectDelay: 700,
   reconnectMaxDelay: 7000,
+  backendRecoveryPromise: null,
+  connectionLostTimer: null,
+  suppressNextSocketCloseNotice: false,
+  wasReconnectingDuringWork: false,
   mouseEnabled: false,
   isDisposed: false,
   detectedApp: "",
@@ -217,6 +221,44 @@ function clearWorkWatchdog() {
   if (!app.workWatchdogTimer) return;
   clearTimeout(app.workWatchdogTimer);
   app.workWatchdogTimer = null;
+}
+
+function isWorkingState() {
+  return app.current === State.LOADING || app.current === State.DOING;
+}
+
+function clearConnectionLostTimer() {
+  if (!app.connectionLostTimer) return;
+  clearTimeout(app.connectionLostTimer);
+  app.connectionLostTimer = null;
+}
+
+function shouldStreamAudioChunk() {
+  return isWebSocketOpen()
+    && (app.current === State.IDLE || app.current === State.LISTENING)
+    && !app.commandPanelOpen
+    && !app.commandSending;
+}
+
+function closeWebSocketQuietly() {
+  if (!app.ws || app.ws.readyState > WebSocket.OPEN) return;
+  app.suppressNextSocketCloseNotice = true;
+  app.ws.close();
+}
+
+async function recoverBackendAfterDisconnect() {
+  if (app.backendRecoveryPromise) return app.backendRecoveryPromise;
+  app.backendRecoveryPromise = (async () => {
+    try {
+      await bridge.startBackend?.();
+    } catch (err) {
+      console.warn("[Backend] Could not restart backend after websocket close:", err);
+    } finally {
+      app.backendRecoveryPromise = null;
+      if (!app.isDisposed) connectWebSocket();
+    }
+  })();
+  return app.backendRecoveryPromise;
 }
 
 function armWorkWatchdog(label = "CIARA") {
@@ -1295,8 +1337,10 @@ async function startAudioStreaming() {
     app.scriptProcessor = app.audioContext.createScriptProcessor(1024, 1, 1);
 
     app.scriptProcessor.onaudioprocess = (event) => {
-      // Only send if websocket is open
-      if (!app.ws || app.ws.readyState !== WebSocket.OPEN) return;
+      // Only stream mic audio while CIARA is waiting/listening. During agent work
+      // the backend is busy and cannot drain continuous audio chunks, which can
+      // otherwise clog the websocket and make the overlay appear disconnected.
+      if (!shouldStreamAudioChunk()) return;
 
       const inputBuffer = event.inputBuffer.getChannelData(0); // Mono Float32Array
       const sampleRate = app.audioContext.sampleRate; // Typically 16000 here
@@ -1308,10 +1352,15 @@ async function startAudioStreaming() {
       const base64Audio = arrayBufferToBase64(wavBuffer);
 
       // Stream to Python Backend
-      app.ws.send(JSON.stringify({
-        type: "audio_chunk",
-        payload: base64Audio
-      }));
+      try {
+        app.ws.send(JSON.stringify({
+          type: "audio_chunk",
+          payload: base64Audio
+        }));
+      } catch (err) {
+        console.warn("[WS] Dropped audio chunk after websocket closed:", err);
+        scheduleReconnect();
+      }
     };
 
     app.sourceNode.connect(app.scriptProcessor);
@@ -1443,8 +1492,15 @@ function connectWebSocket() {
   try {
     app.ws = new WebSocket(WS_URL);
     app.ws.addEventListener("open", () => {
+      clearConnectionLostTimer();
       app.reconnectDelay = 700;
       statusEl.innerText = "Hey CIARA";
+      if (app.wasReconnectingDuringWork) {
+        app.wasReconnectingDuringWork = false;
+        clearWorkWatchdog();
+        setState(State.IDLE, { force: true });
+        clearCommandContext();
+      }
       // (Re-)start audio streaming now that the WS is connected.
       // This handles the case where getUserMedia failed at boot (before
       // mic permission was granted during onboarding) or where the WS
@@ -1567,10 +1623,24 @@ function connectWebSocket() {
       if (bridge.logError) {
         bridge.logError(`WebSocket closed: ${e.code} ${e.reason}`);
       }
-      if (app.current === State.LOADING || app.current === State.DOING) {
+      const wasQuietClose = app.suppressNextSocketCloseNotice || app.isDisposed;
+      app.suppressNextSocketCloseNotice = false;
+      app.ws = null;
+      if (wasQuietClose) return;
+
+      if (isWorkingState()) {
         clearWorkWatchdog();
-        showResponseCard("CIARA disconnected while working. Reconnecting...");
+        app.wasReconnectingDuringWork = true;
+        setState(State.DOING, { text: "Reconnecting...", variant: "", force: true });
+        clearWorkWatchdog();
+        clearConnectionLostTimer();
+        app.connectionLostTimer = window.setTimeout(() => {
+          app.connectionLostTimer = null;
+          if (isWebSocketOpen()) return;
+          showResponseCard("CIARA lost the backend connection. I am restarting it now; run the command again once the pill returns to Hey CIARA.");
+        }, 20000);
       }
+      void recoverBackendAfterDisconnect();
       scheduleReconnect();
     });
   } catch {
@@ -1658,7 +1728,8 @@ window.addEventListener("beforeunload", async () => {
   app.isDisposed = true;
   await stopAudioStreaming();
   if (app.reconnectTimer) clearTimeout(app.reconnectTimer);
-  if (app.ws && app.ws.readyState <= WebSocket.OPEN) app.ws.close();
+  clearConnectionLostTimer();
+  closeWebSocketQuietly();
 });
 
 /* ── Init ── */
@@ -2448,7 +2519,7 @@ async function runSetupChecklist() {
 
   if (startResult.ok) {
     try {
-      if (app.ws) app.ws.close();
+      closeWebSocketQuietly();
     } catch {
       // ignore
     }
