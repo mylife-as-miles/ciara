@@ -8,6 +8,7 @@ exports.default = async function stampWindowsIcon(context) {
   }
 
   const productName = context.packager.appInfo.productFilename;
+  const version = context.packager.appInfo.version || "1.0.0";
   const exePath = path.join(context.appOutDir, `${productName}.exe`);
   const iconPath = path.join(context.packager.projectDir, "build", "icon.ico");
 
@@ -32,7 +33,24 @@ exports.default = async function stampWindowsIcon(context) {
     iconFile.icons.map((item) => item.data)
   );
 
+  const language = { lang: 1033, codepage: 1200 };
+  const versionEntries = ResEdit.Resource.VersionInfo.fromEntries(resources.entries);
+  const versionInfo = versionEntries[0] || ResEdit.Resource.VersionInfo.createEmpty();
+  versionInfo.setFileVersion(version);
+  versionInfo.setProductVersion(version);
+  versionInfo.setStringValues(language, {
+    CompanyName: "Startrz Technologies",
+    FileDescription: "CIARA",
+    FileVersion: version,
+    InternalName: "CIARA",
+    LegalCopyright: "Copyright (C) 2026 Startrz Technologies",
+    OriginalFilename: "CIARA.exe",
+    ProductName: "CIARA",
+    ProductVersion: version,
+  });
+  versionInfo.outputToResourceEntries(resources.entries);
+
   resources.outputResource(exe);
   fs.writeFileSync(exePath, Buffer.from(exe.generate()));
-  console.log(`[stamp-windows-icon] Stamped ${iconPath} into ${exePath}`);
+  console.log(`[stamp-windows-icon] Stamped CIARA icon and version metadata into ${exePath}`);
 };

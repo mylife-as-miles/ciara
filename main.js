@@ -52,6 +52,8 @@ const SETTINGS_HOTKEYS = parseAcceleratorList(
 const WINDOW_LEVEL = "screen-saver";
 const APP_USER_MODEL_ID = "com.startrz.ciara";
 
+app.setName("CIARA");
+
 if (process.platform === "win32") {
   app.setAppUserModelId(APP_USER_MODEL_ID);
 }
@@ -322,30 +324,60 @@ function summarizeCommandOutput(result, max = 900) {
   return combined.slice(0, max);
 }
 
-function runPip(venvPy, args, cwd, extraEnv = {}) {
-  return spawnSync(venvPy, [
-    "-m",
-    "pip",
-    "--disable-pip-version-check",
-    "--no-input",
-    ...args,
-  ], {
-    encoding: "utf8",
-    windowsHide: true,
-    cwd,
-    env: {
-      ...process.env,
-      PIP_DISABLE_PIP_VERSION_CHECK: "1",
-      PIP_NO_CACHE_DIR: "1",
-      PIP_NO_INPUT: "1",
-      PYTHONUTF8: "1",
-      PYTHONIOENCODING: "utf-8",
-      ...extraEnv,
-    },
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env || process.env,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    child.on("error", (err) => {
+      resolve({ status: 1, stdout, stderr: `${stderr}\n${err.message}` });
+    });
+
+    child.on("close", (code) => {
+      resolve({ status: code ?? 1, stdout, stderr });
+    });
   });
 }
 
-function installRequirementsWithRetry(venvPy, requirementsPath, cwd, wheelhousePath = "") {
+function runPip(venvPy, args, cwd, extraEnv = {}) {
+  return runCommand(venvPy, [
+      "-m",
+      "pip",
+      "--disable-pip-version-check",
+      "--no-input",
+      ...args,
+    ],
+    {
+      cwd,
+      env: {
+        ...process.env,
+        PIP_DISABLE_PIP_VERSION_CHECK: "1",
+        PIP_NO_CACHE_DIR: "1",
+        PIP_NO_INPUT: "1",
+        PYTHONUTF8: "1",
+        PYTHONIOENCODING: "utf-8",
+        ...extraEnv,
+      },
+    }
+  );
+}
+
+async function installRequirementsWithRetry(venvPy, requirementsPath, cwd, wheelhousePath = "") {
   const offline = !!wheelhousePath;
   const common = [
     "install",
@@ -356,12 +388,12 @@ function installRequirementsWithRetry(venvPy, requirementsPath, cwd, wheelhouseP
     "-r",
     requirementsPath,
   ];
-  let result = runPip(venvPy, common, cwd);
+  let result = await runPip(venvPy, common, cwd);
   if (result.status === 0) return result;
 
   sendSetupProgressLine(`Dependency install failed, retrying ${offline ? "from bundled wheelhouse" : "with a clean pip cache"}: ${summarizeCommandOutput(result, 500)}`);
-  runPip(venvPy, ["cache", "purge"], cwd);
-  result = runPip(venvPy, common, cwd);
+  await runPip(venvPy, ["cache", "purge"], cwd);
+  result = await runPip(venvPy, common, cwd);
   return result;
 }
 
@@ -369,7 +401,7 @@ function installRequirementsWithRetry(venvPy, requirementsPath, cwd, wheelhouseP
  * Windows: create/upgrade venv with `python -m venv` + pip (no bash required).
  * macOS/Linux: still uses setup.sh under bash.
  */
-function runSetupWindows(venvRoot) {
+async function runSetupWindows(venvRoot) {
   const requirementsPath = path.join(BACKEND_ROOT, "requirements.txt");
   const projectRoot = IS_PACKAGED ? APP_ROOT : __dirname;
   const venvPy = getVenvPythonPath(venvRoot);
@@ -383,7 +415,7 @@ function runSetupWindows(venvRoot) {
         `Existing Python venv uses ${venvVersion || "an unsupported Python"}; recreating with Python 3.10-3.13…`
       );
       try {
-        fs.rmSync(venvRoot, { recursive: true, force: true });
+        await fs.promises.rm(venvRoot, { recursive: true, force: true });
       } catch (err) {
         sendSetupProgressLine(`Could not reset unsupported venv at ${venvRoot}: ${err.message}`);
         return false;
@@ -398,14 +430,14 @@ function runSetupWindows(venvRoot) {
     );
     let r = { status: 0 };
     if (!wheelhousePath) {
-      r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
+      r = await runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
       if (r.status !== 0) {
         sendSetupProgressLine(`pip upgrade failed: ${summarizeCommandOutput(r, 500)}`);
         return false;
       }
     }
     if (fs.existsSync(requirementsPath)) {
-      r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot, wheelhousePath);
+      r = await installRequirementsWithRetry(venvPy, requirementsPath, projectRoot, wheelhousePath);
       if (r.status !== 0) {
         sendSetupProgressLine(`Dependency install failed: ${summarizeCommandOutput(r, 900)}`);
         return false;
@@ -433,10 +465,8 @@ function runSetupWindows(venvRoot) {
     : `${found.cmd} ${found.prefix.join(" ")}`;
 
   sendSetupProgressLine(`Using ${sourceLabel} — creating virtual environment…`);
-  let r = spawnSync(createCommand, createArgs, {
+  let r = await runCommand(createCommand, createArgs, {
     cwd: projectRoot,
-    encoding: "utf8",
-    windowsHide: true,
     env: { ...process.env, CIARA_VENV_DIR: venvRoot },
   });
   if (r.status !== 0) {
@@ -454,7 +484,7 @@ function runSetupWindows(venvRoot) {
     sendSetupProgressLine(`Installing dependencies from bundled wheelhouse (${path.basename(wheelhousePath)})…`);
   } else {
     sendSetupProgressLine("Installing pip and dependencies…");
-    r = runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
+    r = await runPip(venvPy, ["install", "--quiet", "--upgrade", "--no-cache-dir", "pip", "setuptools", "wheel"], projectRoot);
     if (r.status !== 0) {
       sendSetupProgressLine(`pip bootstrap failed: ${summarizeCommandOutput(r, 500)}`);
       return false;
@@ -462,7 +492,7 @@ function runSetupWindows(venvRoot) {
   }
 
   if (fs.existsSync(requirementsPath)) {
-    r = installRequirementsWithRetry(venvPy, requirementsPath, projectRoot, wheelhousePath);
+    r = await installRequirementsWithRetry(venvPy, requirementsPath, projectRoot, wheelhousePath);
     if (r.status !== 0) {
       sendSetupProgressLine(`Dependency install failed: ${summarizeCommandOutput(r, 900)}`);
       return false;
@@ -476,7 +506,7 @@ function runSetupWindows(venvRoot) {
 
 function runSetup(venvRoot) {
   if (process.platform === "win32") {
-    return Promise.resolve(runSetupWindows(venvRoot));
+    return runSetupWindows(venvRoot);
   }
 
   return new Promise((resolve) => {
