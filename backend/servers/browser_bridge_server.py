@@ -27,6 +27,7 @@ if _backend_dir not in sys.path:
 
 from browser.bridge import browser_bridge
 from browser.models import ActionResult, DomChangeEvent, ElementFingerprint, ElementRef, PageSnapshot, ViewportMeta
+from reliability import with_timeout_retry
 
 BRIDGE_HOST = os.environ.get("CIARA_BROWSER_BRIDGE_HOST", "127.0.0.1")
 BRIDGE_PORT = int(os.environ.get("CIARA_BROWSER_BRIDGE_PORT", "8765"))
@@ -119,7 +120,15 @@ def _action_result_from_payload(payload: Dict[str, Any]) -> ActionResult:
 
 
 async def _send(websocket, payload: Dict[str, Any]) -> None:
-    await websocket.send(json.dumps(payload))
+    async def _op():
+        return await websocket.send(json.dumps(payload))
+
+    await with_timeout_retry(
+        "browser_bridge.send",
+        _op,
+        timeout_s=2.5,
+        attempts=2,
+    )
 
 
 async def bridge_handler(websocket):

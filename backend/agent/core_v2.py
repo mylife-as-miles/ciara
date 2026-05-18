@@ -39,6 +39,7 @@ from agent.memory import ConversationMemory, UserPreferences, TaskStore, UserPro
 from agent.workspace_prompts import format_for_system_prompt, load_workspace_prompt_bundle
 from tools.selector import get_tool_selector, set_tool_gateway_context, set_web_progress_callback
 from tools import registry as tool_registry
+from tools.registry import set_automation_cursor_callback
 from providers.router import ModelRouter
 from providers import LLMProvider
 import agent.perception as perception
@@ -857,6 +858,7 @@ class CiaraAgentV2:
         )
         # Wire live progress updates from web gateway → Electron overlay
         set_web_progress_callback(ws_callback)
+        set_automation_cursor_callback(ws_callback)
         print(f"[AgentV2] Intent: {world_state.intent.action.value if world_state.intent else 'unknown'}")
 
         planning_request = user_text

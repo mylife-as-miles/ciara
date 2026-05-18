@@ -11,6 +11,7 @@ print = partial(print, flush=True)
 
 from providers.base import LLMProvider, LLMResponse
 from providers.gemini import GeminiProvider
+from providers.openai_compatible import OpenAICompatibleProvider
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -128,15 +129,15 @@ class ModelRouter:
         from dotenv import load_dotenv
         load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
 
-        self._router: Optional[GeminiProvider] = None
-        self._fast: Optional[GeminiProvider] = None
-        self._powerful: Optional[GeminiProvider] = None
-        self._fallback: Optional[GeminiProvider] = None
+        self._router: Optional[LLMProvider] = None
+        self._fast: Optional[LLMProvider] = None
+        self._powerful: Optional[LLMProvider] = None
+        self._fallback: Optional[LLMProvider] = None
         self._initialized = False
         self._init_lock = asyncio.Lock()
 
     async def initialize(self):
-        """Lazily init Gemini providers. Thread-safe via asyncio.Lock."""
+        """Lazily init configured providers. Thread-safe via asyncio.Lock."""
         if self._initialized:
             return
         async with self._init_lock:
@@ -144,16 +145,44 @@ class ModelRouter:
             if self._initialized:
                 return
 
+            provider_mode = (os.environ.get("CIARA_LLM_PROVIDER") or "gemini").strip().lower()
             api_key = os.environ.get("GEMINI_API_KEY", "")
-            if not api_key:
+            if provider_mode == "gemini" and not api_key:
                 print("[Router] ✗ No GEMINI_API_KEY set — agent cannot function.")
                 return
 
-            def get_provider(model_name: str) -> GeminiProvider:
+            if provider_mode != "gemini" and not (
+                os.environ.get("CIARA_LOCAL_MODEL")
+                or os.environ.get("CIARA_LOCAL_FAST_MODEL")
+                or os.environ.get("GEMINI_FAST_MODEL")
+            ):
+                print("[Router] Local provider selected but no local model is configured.")
+                return
+
+            def get_provider(model_name: str) -> LLMProvider:
+                if provider_mode in {"ollama", "local", "openai-compatible-local", "llama.cpp", "llamacpp"}:
+                    base_url = (
+                        os.environ.get("CIARA_LOCAL_BASE_URL")
+                        or ("http://127.0.0.1:11434/v1" if provider_mode in {"ollama", "local"} else "")
+                    ).rstrip("/")
+                    label = "ollama" if provider_mode in {"ollama", "local"} else "openai-compatible endpoint"
+                    return OpenAICompatibleProvider(
+                        base_url=base_url,
+                        api_key=os.environ.get("CIARA_LOCAL_API_KEY", "ciara-local"),
+                        model=model_name,
+                        label=label,
+                        supports_vision=os.environ.get("CIARA_LOCAL_SUPPORTS_VISION", "0") == "1",
+                        supports_tools=os.environ.get("CIARA_LOCAL_SUPPORTS_TOOLS", "1") != "0",
+                    )
+
                 return GeminiProvider(api_key=api_key, model=model_name)
 
             # Routing model (ultra-cheap, ultra-fast tier 0)
-            routing_name = os.environ.get("GEMINI_ROUTING_MODEL", ROUTING_MODEL)
+            routing_name = (
+                os.environ.get("CIARA_LOCAL_ROUTING_MODEL")
+                or os.environ.get("CIARA_LOCAL_MODEL")
+                or os.environ.get("GEMINI_ROUTING_MODEL", ROUTING_MODEL)
+            )
             self._router = get_provider(routing_name)
             if self._router and await self._router.is_available():
                 print(f"[Router] ✓ ROUTER (classifier): {routing_name}")
@@ -162,7 +191,11 @@ class ModelRouter:
                 self._router = None
 
             # Fast model (cheap, simple tasks)
-            fast_name = os.environ.get("GEMINI_FAST_MODEL", FAST_MODEL)
+            fast_name = (
+                os.environ.get("CIARA_LOCAL_FAST_MODEL")
+                or os.environ.get("CIARA_LOCAL_MODEL")
+                or os.environ.get("GEMINI_FAST_MODEL", FAST_MODEL)
+            )
             self._fast = get_provider(fast_name)
             if self._fast and await self._fast.is_available():
                 print(f"[Router] ✓ FAST (simple tasks): {fast_name}")
@@ -171,7 +204,11 @@ class ModelRouter:
                 self._fast = None
 
             # Powerful model (complex/multimodal)
-            powerful_name = os.environ.get("GEMINI_POWERFUL_MODEL", POWERFUL_MODEL)
+            powerful_name = (
+                os.environ.get("CIARA_LOCAL_POWERFUL_MODEL")
+                or os.environ.get("CIARA_LOCAL_MODEL")
+                or os.environ.get("GEMINI_POWERFUL_MODEL", POWERFUL_MODEL)
+            )
             self._powerful = get_provider(powerful_name)
             if self._powerful and await self._powerful.is_available():
                 print(f"[Router] ✓ POWERFUL (escalation): {powerful_name}")
@@ -180,7 +217,11 @@ class ModelRouter:
                 self._powerful = None
 
             # Fallback model (for when primary models fail)
-            fallback_name = os.environ.get("GEMINI_FALLBACK_MODEL", POWERFUL_MODEL)
+            fallback_name = (
+                os.environ.get("CIARA_LOCAL_FALLBACK_MODEL")
+                or os.environ.get("CIARA_LOCAL_MODEL")
+                or os.environ.get("GEMINI_FALLBACK_MODEL", POWERFUL_MODEL)
+            )
             self._fallback = get_provider(fallback_name)
             if self._fallback and await self._fallback.is_available():
                 print(f"[Router] ✓ FALLBACK (emergency): {fallback_name}")
@@ -276,7 +317,7 @@ class ModelRouter:
                 )
 
         # No models available at all
-        raise RuntimeError("No Gemini models available. Set GEMINI_API_KEY in .env")
+        raise RuntimeError("No LLM providers available. Configure Gemini or a local model runtime.")
 
     def _looks_trivial_fast_request(self, text: str) -> bool:
         normalized = (text or "").strip().lower()
@@ -422,11 +463,11 @@ class ModelRouter:
         return response
 
     @property
-    def fast(self) -> Optional[GeminiProvider]:
+    def fast(self) -> Optional[LLMProvider]:
         return self._fast
 
     @property
-    def powerful(self) -> Optional[GeminiProvider]:
+    def powerful(self) -> Optional[LLMProvider]:
         return self._powerful
 
     def status(self) -> dict:

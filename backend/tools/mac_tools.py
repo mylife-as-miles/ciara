@@ -37,6 +37,77 @@ def _screenshot_work_dir() -> str:
         return os.path.join(tempfile.gettempdir(), "ciara")
 
 
+def _windows_mouse_event(flags: int, data: int = 0) -> None:
+    import ctypes
+
+    ctypes.windll.user32.mouse_event(flags, 0, 0, data, 0)
+
+
+def _windows_move_mouse(x: int, y: int) -> None:
+    import ctypes
+
+    ctypes.windll.user32.SetCursorPos(int(x), int(y))
+
+
+def _windows_click_mouse(x: int, y: int, click_type: str = "single") -> None:
+    import ctypes
+    import time as _time
+
+    user32 = ctypes.windll.user32
+    user32.SetCursorPos(int(x), int(y))
+    if click_type == "right":
+        down, up = 0x0008, 0x0010
+        clicks = 1
+    else:
+        down, up = 0x0002, 0x0004
+        clicks = 2 if click_type == "double" else 1
+
+    for _ in range(clicks):
+        user32.mouse_event(down, 0, 0, 0, 0)
+        _time.sleep(0.04)
+        user32.mouse_event(up, 0, 0, 0, 0)
+        _time.sleep(0.06)
+
+
+def _windows_drag_mouse(x: int, y: int, x2: int, y2: int) -> None:
+    import ctypes
+    import time as _time
+
+    user32 = ctypes.windll.user32
+    user32.SetCursorPos(int(x), int(y))
+    _time.sleep(0.06)
+    user32.mouse_event(0x0002, 0, 0, 0, 0)
+    _time.sleep(0.08)
+    user32.SetCursorPos(int(x2), int(y2))
+    _time.sleep(0.08)
+    user32.mouse_event(0x0004, 0, 0, 0, 0)
+
+
+def _windows_paste_text(text: str) -> None:
+    import ctypes
+    import subprocess
+    import time as _time
+
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", "Set-Clipboard -Value $input"],
+        input=text,
+        text=True,
+        encoding="utf-8",
+        check=True,
+        timeout=4,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    user32 = ctypes.windll.user32
+    vk_control = 0x11
+    vk_v = 0x56
+    keyup = 0x0002
+    user32.keybd_event(vk_control, 0, 0, 0)
+    user32.keybd_event(vk_v, 0, 0, 0)
+    _time.sleep(0.04)
+    user32.keybd_event(vk_v, 0, keyup, 0)
+    user32.keybd_event(vk_control, 0, keyup, 0)
+
+
 # Well-known services that are websites, not native macOS apps
 KNOWN_URLS: dict[str, str] = {
     "youtube": "https://www.youtube.com",
@@ -424,6 +495,13 @@ async def web_search(query: str) -> str:
 async def type_text(text: str) -> str:
     if not text:
         return "No text provided to type."
+
+    if os.name == "nt":
+        try:
+            _windows_paste_text(text)
+            return f"Pasted {len(text)} characters into the active field."
+        except Exception as e:
+            return f"Failed to paste text on Windows: {str(e)[:200]}"
 
     # For long text (>50 chars), use clipboard paste instead of keystroke
     # — keystroke is slow and unreliable for long strings
@@ -1507,6 +1585,221 @@ async def read_screen(question: str = "") -> str:
     filepath = os.path.join(screenshot_dir, f"screen_{int(time.time())}.png")
     
     try:
+        if os.name == "nt":
+            try:
+                from PIL import ImageGrab, Image, ImageDraw, ImageFont
+                import io
+
+                img = ImageGrab.grab(all_screens=True).convert("RGB")
+                logical_w, logical_h = img.size
+                display_num = 1
+                _display_origin = {"x": 0, "y": 0}
+
+                raw_buf = io.BytesIO()
+                img.save(raw_buf, format="PNG", optimize=False, compress_level=0)
+                raw_bytes = raw_buf.getvalue()
+                img_hash = hashlib.md5(raw_bytes).hexdigest()
+                if img_hash == _screen_cache["hash"] and _screen_cache["result"]:
+                    return _screen_cache["result"]
+
+                overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+                draw = ImageDraw.Draw(overlay)
+                step = 100
+                try:
+                    font = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 11)
+                except Exception:
+                    font = ImageFont.load_default()
+
+                line_color = (255, 50, 50, 60)
+                text_color = (255, 50, 50, 150)
+                for x in range(step, logical_w, step):
+                    draw.line([(x, 0), (x, logical_h)], fill=line_color, width=1)
+                    draw.text((x + 2, 2), str(x), fill=text_color, font=font)
+                for y in range(step, logical_h, step):
+                    draw.line([(0, y), (logical_w, y)], fill=line_color, width=1)
+                    draw.text((2, y + 2), str(y), fill=text_color, font=font)
+
+                img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+                out_buf = io.BytesIO()
+                img.save(out_buf, format="JPEG", quality=85)
+                img_data = base64.b64encode(out_buf.getvalue()).decode("utf-8")
+                resolution_hint = (
+                    f" The image shows the Windows desktop at resolution"
+                    f" ({logical_w} x {logical_h}). Pixel positions in this image"
+                    f" correspond to screen coordinates from the top-left of the captured desktop."
+                )
+            except Exception as e:
+                return f"ERROR: Failed to capture Windows screenshot: {str(e)[:200]}"
+        else:
+            # â”€â”€ Detect active display using Quartz inline (no subprocess spawn) â”€â”€
+            display_num = 1
+            logical_w, logical_h = None, None
+            origin_x, origin_y = 0, 0
+            try:
+                if Quartz:
+                    max_displays = 16
+                    err, display_ids, _ = Quartz.CGGetActiveDisplayList(max_displays, None, None)
+                    if err == 0 and display_ids:
+                        # Find frontmost layer-0 window center
+                        window_list = Quartz.CGWindowListCopyWindowInfo(
+                            Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
+                            Quartz.kCGNullWindowID,
+                        )
+                        active_cx, active_cy = 0, 0
+                        for win in (window_list or []):
+                            if win.get("kCGWindowLayer", 999) == 0 and win.get("kCGWindowOwnerName") != "Window Server":
+                                b = win.get("kCGWindowBounds", {})
+                                active_cx = b.get("X", 0) + b.get("Width", 0) / 2
+                                active_cy = b.get("Y", 0) + b.get("Height", 0) / 2
+                                break
+
+                        # Which display contains that center?
+                        r0 = Quartz.CGDisplayBounds(display_ids[0])
+                        logical_w = int(r0.size.width)
+                        logical_h = int(r0.size.height)
+                        for i, did in enumerate(display_ids):
+                            r = Quartz.CGDisplayBounds(did)
+                            if (r.origin.x <= active_cx < r.origin.x + r.size.width and
+                                    r.origin.y <= active_cy < r.origin.y + r.size.height):
+                                display_num = i + 1
+                                logical_w = int(r.size.width)
+                                logical_h = int(r.size.height)
+                                origin_x = int(r.origin.x)
+                                origin_y = int(r.origin.y)
+                                break
+            except Exception as e:
+                print(f"[read_screen] Display detection error (using display 1): {e}")
+
+            _display_origin = {"x": origin_x, "y": origin_y}
+
+            # â”€â”€ Capture the target display â”€â”€
+            proc = await asyncio.create_subprocess_exec(
+                "screencapture", "-x", "-D", str(display_num), "-t", "png", filepath,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=5.0)
+            
+            if not os.path.exists(filepath):
+                return "ERROR: Failed to capture screenshot"
+
+            # â”€â”€ PIL pipeline: resize + hash + grid + encode (all in-process, no sips) â”€â”€
+            # Using PIL avoids spawning sips (a slow subprocess on large Retina PNGs).
+            # Sequence: load â†’ resize to logical res â†’ hash for cache â†’ draw grid â†’ encode.
+            try:
+                from PIL import Image, ImageDraw, ImageFont
+                img = Image.open(filepath).convert("RGB")
+                os.remove(filepath)
+
+                # Resize to logical resolution (1 pixel = 1 click point)
+                if logical_w and logical_h and img.size != (logical_w, logical_h):
+                    img = img.resize((logical_w, logical_h), Image.LANCZOS)
+
+                # Hash the resized-but-ungridded image for cache comparison
+                # Use a fast in-memory PNG (compress_level=0 = no compression, pure speed)
+                import io
+                raw_buf = io.BytesIO()
+                img.save(raw_buf, format="PNG", optimize=False, compress_level=0)
+                raw_bytes = raw_buf.getvalue()
+                img_hash = hashlib.md5(raw_bytes).hexdigest()
+                if img_hash == _screen_cache["hash"] and _screen_cache["result"]:
+                    return _screen_cache["result"]  # Screen unchanged, skip Vision API
+
+                # Draw coordinate grid overlay (in-place on the PIL image)
+                overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+                draw = ImageDraw.Draw(overlay)
+                w, h = img.size
+                step = 100
+                try:
+                    font = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 11)
+                except Exception:
+                    font = ImageFont.load_default()
+                line_color = (255, 50, 50, 60)
+                text_color = (255, 50, 50, 140)
+                for x in range(step, w, step):
+                    draw.line([(x, 0), (x, h)], fill=line_color, width=1)
+                    draw.text((x + 2, 2), str(x), fill=text_color, font=font)
+                for y in range(step, h, step):
+                    draw.line([(0, y), (w, y)], fill=line_color, width=1)
+                    draw.text((2, y + 2), str(y), fill=text_color, font=font)
+                img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+
+                # Encode as JPEG (4-6x smaller than PNG, faster Vision API upload)
+                out_buf = io.BytesIO()
+                img.save(out_buf, format="JPEG", quality=85)
+                img_data = base64.b64encode(out_buf.getvalue()).decode("utf-8")
+
+            except ImportError:
+                # PIL not available â€” fall back to raw bytes, no resize/grid
+                with open(filepath, "rb") as f:
+                    raw_bytes = f.read()
+                os.remove(filepath)
+                img_hash = hashlib.md5(raw_bytes).hexdigest()
+                if img_hash == _screen_cache["hash"] and _screen_cache["result"]:
+                    return _screen_cache["result"]
+                img_data = base64.b64encode(raw_bytes).decode("utf-8")
+
+            resolution_hint = ""
+            if logical_w and logical_h:
+                resolution_hint = (
+                    f" The image shows display {display_num} at logical resolution"
+                    f" ({logical_w} x {logical_h}). Pixel positions in this image"
+                    f" correspond 1:1 to click coordinates on that display."
+                )
+
+        # Use Gemini Vision to analyze
+        # IMPORTANT: Use the POWERFUL model for screen reading â€” coordinate
+        # precision is critical for click accuracy.  Flash models are too
+        # imprecise for small UI targets like buttons, icons, and links.
+        from google import genai
+        from google.genai import types
+        
+        client = genai.Client()
+        prompt = question or "Describe what's on this screen. Include any visible text, buttons, UI elements, error messages, and the overall layout. Be concise but thorough."
+        prompt += (
+            " Return only the final user-facing answer. Do not include analysis steps,"
+            " hidden reasoning, implementation notes, or a checklist of how you interpreted the image."
+            f"{resolution_hint} The image has a coordinate grid overlay with"
+            f" labeled X values along the top and Y values along the left."
+            f" Use these grid lines to output PRECISE (X, Y) pixel coordinates"
+            f" for each clickable UI element, button, or link you describe."
+            f" Read the grid labels carefully â€” the numbers on the lines tell you"
+            f" the exact pixel value at that position. Interpolate between grid"
+            f" lines for elements that fall between them."
+            f" These coordinates will be used directly for mouse clicks."
+        )
+        
+        response = client.models.generate_content(
+            model=os.environ.get("GEMINI_POWERFUL_MODEL", "gemma-4-31b-it"),
+            contents=[
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=prompt),
+                        types.Part.from_bytes(
+                            data=base64.b64decode(img_data),
+                            mime_type="image/jpeg"
+                        )
+                    ]
+                )
+            ]
+        )
+        
+        # Parse response parts manually to avoid warnings about thought_signature
+        output_text = ""
+        if response.candidates and response.candidates[0].content:
+            for part in response.candidates[0].content.parts:
+                if part.text:
+                    output_text += part.text + "\n"
+        
+        result = output_text.strip()[:3000] if output_text else "Could not analyze screenshot"
+        _screen_cache = {"hash": img_hash, "result": result}
+        return result
+
+    except Exception as e:
+        return f"ERROR analyzing screen: {str(e)[:200]}"
+
+    try:
         # ── Detect active display using Quartz inline (no subprocess spawn) ──
         display_num = 1
         logical_w, logical_h = None, None
@@ -1700,6 +1993,10 @@ async def read_screen(question: str = "") -> str:
 )
 async def click_element(x: int, y: int, click_type: str = "single") -> str:
     try:
+        if os.name == "nt":
+            _windows_click_mouse(x, y, click_type)
+            return f"Clicked at ({x}, {y}) [{click_type}]"
+
         # Apply display origin offset — read_screen captures a single display
         # and the Vision model returns coordinates relative to that image (0,0).
         # On multi-monitor setups the captured display may not start at (0,0)
@@ -1947,6 +2244,12 @@ async def _get_clipboard_image_info() -> str:
     }
 )
 async def get_ui_tree(app_name: str = "", search_term: str = "") -> str:
+    if os.name == "nt":
+        return (
+            "ERROR: get_ui_tree is only available on macOS Accessibility. "
+            "On Windows, use read_screen for visual screen analysis instead."
+        )
+
     # Build the AppleScript to get the target process
     target_block = 'set targetApp to first process whose frontmost is true'
     if app_name:
@@ -2132,6 +2435,17 @@ async def press_key(key: str, times: int = 1) -> str:
 )
 async def mouse_action(action: str, x: int = 0, y: int = 0, x2: int = 0, y2: int = 0, lines: int = 5) -> str:
     try:
+        if os.name == "nt":
+            if action == "move":
+                _windows_move_mouse(x, y)
+                return f"Moved mouse to ({x}, {y})"
+            if action == "scroll":
+                _windows_mouse_event(0x0800, int(lines) * 120)
+                return f"Scrolled {'up' if lines > 0 else 'down'} {abs(lines)} lines"
+            if action == "drag":
+                _windows_drag_mouse(x, y, x2, y2)
+                return f"Dragged from ({x}, {y}) to ({x2}, {y2})"
+
         if action == "move":
             py_script = f"""
 import Quartz
@@ -2488,6 +2802,77 @@ def _fallback_input_match(input_elements: list[dict], field_description: str) ->
     return _pick(input_elements)
 
 
+async def _browser_dom_click_first(description: str) -> Optional[str]:
+    """Try browser DOM refs first when a browser snapshot is live."""
+    try:
+        from agent import perception as _perception
+        from browser.store import browser_store
+        from browser.resolver import BrowserResolver
+        from tools.browser_tools import browser_click_ref
+
+        active_app = (await _perception.get_active_app() or "").strip().lower()
+        if active_app not in _perception.BROWSERS:
+            return None
+
+        snapshot = browser_store.get_snapshot()
+        if not snapshot or not snapshot.elements:
+            return None
+
+        ranked = BrowserResolver().resolve(description, snapshot.elements, action="click", limit=1)
+        if not ranked:
+            return None
+
+        score, element, _ = ranked[0]
+        if score < 60:
+            return None
+
+        result = await browser_click_ref(element.ref_id, session_id=snapshot.session_id)
+        return (
+            f"Browser DOM resolved '{description}' to [{element.ref_id}] "
+            f"{element.primary_label()[:80]}. {result}"
+        )
+    except Exception:
+        return None
+
+
+async def _browser_dom_type_first(field_description: str, text: str, clear_first: bool = False) -> Optional[str]:
+    """Try browser DOM refs first for text-entry flows."""
+    try:
+        from agent import perception as _perception
+        from browser.store import browser_store
+        from browser.resolver import BrowserResolver
+        from tools.browser_tools import browser_type_ref
+
+        active_app = (await _perception.get_active_app() or "").strip().lower()
+        if active_app not in _perception.BROWSERS:
+            return None
+
+        snapshot = browser_store.get_snapshot()
+        if not snapshot or not snapshot.elements:
+            return None
+
+        ranked = BrowserResolver().resolve(field_description, snapshot.elements, action="type", limit=1)
+        if not ranked:
+            return None
+
+        score, element, _ = ranked[0]
+        if score < 60:
+            return None
+
+        result = await browser_type_ref(
+            element.ref_id,
+            text=text,
+            clear_first=clear_first,
+            session_id=snapshot.session_id,
+        )
+        return (
+            f"Browser DOM resolved '{field_description}' to [{element.ref_id}] "
+            f"{element.primary_label()[:80]}. {result}"
+        )
+    except Exception:
+        return None
+
+
 # ── 23. click_ui ──
 @registry.register(
     name="click_ui",
@@ -2522,8 +2907,11 @@ async def click_ui(description: str, app_name: str = "", click_type: str = "sing
     """Find a UI element by description and click it using the Accessibility API."""
     try:
         await _activate_target_app(app_name)
+        dom_result = await _browser_dom_click_first(description)
+        if dom_result:
+            return dom_result
 
-        # 1) Search accessibility tree
+        # 1) Search accessibility tree (Windows UIA / accessibility)
         elements, raw = await _get_cached_ui_tree(app_name=app_name, search_term=description)
         timed_out = "timed out" in (raw or "").lower() or "skipped" in (raw or "").lower()
         if not elements and not timed_out:
@@ -2533,7 +2921,7 @@ async def click_ui(description: str, app_name: str = "", click_type: str = "sing
         match = _best_match(elements, description) if elements else None
 
         if not match:
-            # 3) Visual fallback — find the element on screen using Gemini Flash
+            # 3) OCR/screenshot fallback — find the element on screen using Gemini Flash
             print(f"[click_ui] Accessibility miss for '{description}', trying visual fallback…")
             coords = await _fast_visual_locate(
                 description,
@@ -2604,8 +2992,11 @@ async def type_in_field(field_description: str, text: str, app_name: str = "", c
     """Find a text field, click to focus it, and type text."""
     try:
         await _activate_target_app(app_name)
+        dom_result = await _browser_dom_type_first(field_description, text, clear_first=clear_first)
+        if dom_result:
+            return dom_result
 
-        # 1) Find the field via accessibility API
+        # 1) Find the field via accessibility API (Windows UIA / accessibility)
         elements, raw = await _get_cached_ui_tree(app_name=app_name, search_term=field_description)
         timed_out = "timed out" in (raw or "").lower() or "skipped" in (raw or "").lower()
         if not elements and not timed_out:
@@ -2626,7 +3017,7 @@ async def type_in_field(field_description: str, text: str, app_name: str = "", c
         if match:
             cx, cy = match["cx"], match["cy"]
         else:
-            # 3) Visual fallback — find the field using Gemini Flash
+            # 3) OCR/screenshot fallback — find the field using Gemini Flash
             print(f"[type_in_field] Accessibility miss for '{field_description}', trying visual fallback…")
             coords = await _fast_visual_locate(
                 f"'{field_description}' text field or input area",

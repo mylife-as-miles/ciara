@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from .models import ActionRequest, ActionResult, DomChangeEvent, PageSnapshot
 from .store import browser_store
 from runtime_state import runtime_state_store
+from reliability import with_timeout_retry
 
 
 class BrowserBridge:
@@ -207,7 +208,16 @@ class BrowserBridge:
             # Fire-and-forget: schedule the send on the event loop
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                loop.create_task(ws.send(payload))
+                async def _push():
+                    return await ws.send(payload)
+                loop.create_task(
+                    with_timeout_retry(
+                        "browser_bridge.push_actions",
+                        _push,
+                        timeout_s=2.5,
+                        attempts=2,
+                    )
+                )
         except Exception:
             pass  # Fall back to polling
 

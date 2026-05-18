@@ -7,10 +7,16 @@ contextBridge.exposeInMainWorld("overlayAPI", {
   closeWindow: () => ipcRenderer.invoke("window:close"),
   isWindowMaximized: () => ipcRenderer.invoke("window:is-maximized"),
   setOnboardingMode: (active) => ipcRenderer.invoke("window:set-onboarding-mode", Boolean(active)),
+  setAutomationLock: (active) => ipcRenderer.invoke("window:set-automation-lock", Boolean(active)),
   onWindowMaximizedChange: (handler) => {
     const wrapped = (_, isMaximized) => handler(isMaximized);
     ipcRenderer.on("window:maximized-change", wrapped);
     return () => ipcRenderer.removeListener("window:maximized-change", wrapped);
+  },
+  onWindowModeChange: (handler) => {
+    const wrapped = (_, mode) => handler(mode);
+    ipcRenderer.on("window:mode-change", wrapped);
+    return () => ipcRenderer.removeListener("window:mode-change", wrapped);
   },
   enableMouse: () => ipcRenderer.send("enable-mouse"),
   disableMouse: () => ipcRenderer.send("disable-mouse"),
@@ -46,6 +52,13 @@ contextBridge.exposeInMainWorld("overlayAPI", {
 
   // ── Backend lifecycle ──
   startBackend: () => ipcRenderer.invoke("backend:start"),
+  getOllamaStatus: () => ipcRenderer.invoke("ollama:status"),
+  pullOllamaModel: (modelName) => ipcRenderer.invoke("ollama:pull", modelName),
+  onOllamaProgress: (handler) => {
+    const wrapped = (_, text) => handler(text);
+    ipcRenderer.on("ollama:progress", wrapped);
+    return () => ipcRenderer.removeListener("ollama:progress", wrapped);
+  },
 
   // ── Setup progress (setup.sh stdout forwarded from main process) ──
   onSetupProgress: (handler) => {

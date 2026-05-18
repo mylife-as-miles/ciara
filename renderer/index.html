@@ -15,7 +15,26 @@
 <body>
 <div class="stage">
 
+    <div class="automation-lock hidden" id="automation-lock" aria-hidden="true">
+      <div class="automation-lock-edge automation-lock-edge-top"></div>
+      <div class="automation-lock-edge automation-lock-edge-right"></div>
+      <div class="automation-lock-edge automation-lock-edge-bottom"></div>
+      <div class="automation-lock-edge automation-lock-edge-left"></div>
+      <div class="automation-lock-label" id="automation-lock-label">CIARA is controlling the screen</div>
+    </div>
+
     <div id="glow" class="ambient-glow"></div>
+
+    <div class="ciara-cursor hidden" id="ciara-cursor" aria-hidden="true">
+      <div class="ciara-cursor-trail" id="ciara-cursor-trail"></div>
+      <div class="ciara-cursor-mark">
+        <svg viewBox="0 0 34 34">
+          <path d="M14.2 2.5c2.1 5.1 4.9 7.9 10.4 10.2l-3 7.1c-5.3-2.2-8.1-5-10.4-10.2l3-7.1Z" />
+          <path d="M10.6 10.9c5.3 2.2 8.1 5 10.4 10.2l-7.1 3c-2.2-5.3-5-8.1-10.2-10.4l6.9-2.8Z" />
+        </svg>
+      </div>
+      <div class="ciara-cursor-label" id="ciara-cursor-label">CIARA</div>
+    </div>
 
     <header class="app-titlebar" id="app-titlebar" aria-label="CIARA window title bar">
       <div class="app-titlebar-brand" aria-label="CIARA">
@@ -308,16 +327,71 @@
               <ul><li>Connect Gemini</li><li>Full control over models</li><li>Pay only for what you use</li></ul>
               <button type="button" class="onboarding-option-action" id="onboarding-choice-api">Connect API keys</button>
             </article>
-            <article class="onboarding-option-card muted" role="listitem">
+            <article class="onboarding-option-card" role="listitem">
               <div class="onboarding-option-icon">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </div>
               <h4>Free local models</h4>
               <p>Fully private</p>
               <ul><li>Works offline</li><li>Data stays local</li><li>Local runtime</li></ul>
-              <button type="button" class="onboarding-option-action disabled" disabled>Coming Soon</button>
+              <button type="button" class="onboarding-option-action" id="onboarding-choice-local">Choose local model</button>
             </article>
           </div>
+        </div>
+
+        <!-- Step 2: Local Model Selection -->
+        <div class="onboarding-step" id="onboarding-step-local-model">
+          <div class="onboarding-step-kicker">Step 2 of 8</div>
+          <h3 class="onboarding-step-title">Choose a Model</h3>
+          <div class="onboarding-body local-model-body">
+            <p class="onboarding-step-intro">Select the Gemma 4 model CIARA should use. You can run it through Ollama or point CIARA at a custom OpenAI-compatible endpoint.</p>
+            <div class="local-runtime-tabs" role="tablist" aria-label="Local runtime">
+              <button type="button" class="local-runtime-tab active" data-local-runtime="ollama">Ollama</button>
+              <button type="button" class="local-runtime-tab" data-local-runtime="custom">llama.cpp</button>
+            </div>
+
+            <div class="local-runtime-panel active" id="local-runtime-ollama">
+              <div class="local-model-toolbar">
+                <span id="ollama-status-text">Checking Ollama...</span>
+                <button type="button" class="local-text-button" id="ollama-refresh">Refresh</button>
+              </div>
+              <div class="local-model-list" id="local-model-list" role="radiogroup" aria-label="Gemma 4 model selection">
+                <button type="button" class="local-model-row selected" data-model-id="gemma-4-26b-a4b-it" role="radio" aria-checked="true">
+                  <span class="local-model-spark" aria-hidden="true"></span>
+                  <span class="local-model-copy">
+                    <span class="local-model-name">Gemma 4 26B</span>
+                    <span class="local-model-meta">Balanced speed and quality for daily use</span>
+                  </span>
+                  <span class="local-model-pill">Recommended</span>
+                  <span class="local-model-action">Use</span>
+                </button>
+                <button type="button" class="local-model-row" data-model-id="gemma-4-31b-it" role="radio" aria-checked="false">
+                  <span class="local-model-spark green" aria-hidden="true"></span>
+                  <span class="local-model-copy">
+                    <span class="local-model-name">Gemma 4 31B</span>
+                    <span class="local-model-meta">Stronger reasoning with a heavier response budget</span>
+                  </span>
+                  <span class="local-model-pill warning">Higher quality</span>
+                  <span class="local-model-action">Use</span>
+                </button>
+              </div>
+              <p class="settings-status" id="local-model-status" aria-live="polite"></p>
+            </div>
+
+            <div class="local-runtime-panel" id="local-runtime-custom">
+              <div class="local-custom-box">
+                <label class="settings-label" for="local-custom-base-url">OpenAI-compatible base URL</label>
+                <input type="text" id="local-custom-base-url" class="onboarding-input onboarding-input-secondary" value="http://127.0.0.1:8080/v1" spellcheck="false" />
+                <label class="settings-label" for="local-custom-model">Model name</label>
+                <input type="text" id="local-custom-model" class="onboarding-input onboarding-input-secondary" placeholder="gemma-4-26b-a4b-it" spellcheck="false" />
+                <p class="settings-hint subtle">Use any local server that exposes a model through an OpenAI-compatible /v1 endpoint.</p>
+              </div>
+              <p class="settings-status" id="local-custom-status" aria-live="polite"></p>
+            </div>
+          </div>
+          <button type="button" class="onboarding-btn onboarding-btn-gradient" id="onboarding-next-local">
+            <span class="onboarding-btn-label">Use Local Model</span>
+          </button>
         </div>
 
         <!-- Step 1: API Key -->
@@ -561,10 +635,24 @@
           <div class="onboarding-header-rule" aria-hidden="true"></div>
         </div>
         <div class="settings-form">
+          <p class="settings-hint"><strong>Model provider</strong> - choose cloud Gemini, Ollama, or a custom OpenAI-compatible endpoint.</p>
+          <label class="settings-label" for="settings-llm-provider">Provider</label>
+          <select id="settings-llm-provider" class="onboarding-input onboarding-input-secondary">
+            <option value="gemini">Gemini API</option>
+            <option value="ollama">Ollama local</option>
+            <option value="openai-compatible-local">llama.cpp</option>
+          </select>
           <p class="settings-hint"><strong>Gemini&nbsp;API</strong> (Gemma&nbsp;4 reasoning) — get a key at
             <a href="https://aistudio.google.com/app/apikey" id="settings-link-aistudio" class="onboarding-inline-link">Google AI Studio</a>.</p>
           <label class="settings-label" for="settings-gemini-key">Gemini API key</label>
           <input type="password" id="settings-gemini-key" class="onboarding-input" autocomplete="off" spellcheck="false" />
+
+          <div class="settings-local-provider-box">
+            <label class="settings-label" for="settings-local-model">Local model</label>
+            <input type="text" id="settings-local-model" class="onboarding-input onboarding-input-secondary" placeholder="gemma-4-26b-a4b-it" autocomplete="off" spellcheck="false" />
+            <label class="settings-label" for="settings-local-base-url">Local base URL</label>
+            <input type="text" id="settings-local-base-url" class="onboarding-input onboarding-input-secondary" placeholder="http://127.0.0.1:11434/v1" autocomplete="off" spellcheck="false" />
+          </div>
 
           <label class="settings-label" for="settings-picovoice-key">Picovoice (wake word)</label>
           <input type="password" id="settings-picovoice-key" class="onboarding-input onboarding-input-secondary" autocomplete="off" spellcheck="false" />

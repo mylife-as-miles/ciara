@@ -76,6 +76,13 @@ let tray = null;
 let isQuitting = false;
 let backendStartPromise = null;
 let backendSetupFailureUntil = 0;
+let lastBackendStartDetail = "";
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+  process.exit(0);
+}
 
 const BACKEND_WS_URL = process.env.CIARA_BACKEND_WS_URL || "ws://127.0.0.1:8000/ws";
 const BACKEND_HOST = process.env.CIARA_BACKEND_HOST || "127.0.0.1";
@@ -126,7 +133,12 @@ const CRED_FILE = path.join(app.getPath("userData"), "credentials.enc");
 function hasUsableCredentials() {
   if (!fs.existsSync(CRED_FILE)) return false;
   const creds = loadCredentials();          // returns null on any failure
-  return !!(creds && creds.gemini_api_key);
+  if (!creds) return false;
+  if (creds.llm_provider === "ollama") return !!creds.local_model;
+  if (creds.llm_provider === "openai-compatible-local") {
+    return !!(creds.local_base_url && creds.local_model);
+  }
+  return !!creds.gemini_api_key;
 }
 
 function sleep(ms) {
@@ -283,6 +295,7 @@ function writeDependencyMarker(venvRoot, venvPythonPath, requirementsPath) {
 function sendSetupProgressLine(text) {
   const line = String(text).trim();
   if (!line) return;
+  lastBackendStartDetail = line;
   process.stdout.write(`[Setup] ${line}\n`);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("setup:progress", line);
@@ -564,6 +577,7 @@ async function startPythonBackend() {
 async function startPythonBackendInner() {
   if (backendSetupFailureUntil > Date.now()) {
     console.warn("[Backend] Previous setup attempt failed recently; waiting before retry.");
+    lastBackendStartDetail = "A recent backend setup attempt failed. Wait a moment, then try again.";
     return false;
   }
 
@@ -578,6 +592,9 @@ async function startPythonBackendInner() {
     const ok = await runSetup(venvRoot);
     if (!ok) {
       console.error("[Backend] Setup failed — cannot start backend");
+      if (!lastBackendStartDetail) {
+        lastBackendStartDetail = "Python dependency setup failed. Open 'more' to see the latest setup output.";
+      }
       backendSetupFailureUntil = Date.now() + 60000;
       return false;
     }
@@ -587,6 +604,7 @@ async function startPythonBackendInner() {
   if (await canReachBackend()) {
     console.log(`[Backend] Reusing existing backend at ${BACKEND_WS_URL}`);
     ownsPythonProcess = false;
+    lastBackendStartDetail = `Connected to the existing backend at ${BACKEND_WS_URL}.`;
     return true;
   }
 
@@ -600,6 +618,25 @@ async function startPythonBackendInner() {
     PYTHONIOENCODING: "utf-8",
   };
   if (savedCreds?.gemini_api_key) spawnEnv.GEMINI_API_KEY = savedCreds.gemini_api_key;
+  const llmProvider = (savedCreds?.llm_provider ?? "gemini").trim();
+  spawnEnv.CIARA_LLM_PROVIDER = llmProvider;
+  const localModel = (savedCreds?.local_model ?? "").trim();
+  const localBaseUrl = (savedCreds?.local_base_url ?? "").trim();
+  const localApiKey = (savedCreds?.local_api_key ?? "").trim();
+  if (localModel) {
+    spawnEnv.CIARA_LOCAL_MODEL = localModel;
+    spawnEnv.CIARA_LOCAL_FAST_MODEL = localModel;
+    spawnEnv.CIARA_LOCAL_POWERFUL_MODEL = localModel;
+    spawnEnv.CIARA_LOCAL_ROUTING_MODEL = localModel;
+  }
+  if (localBaseUrl) spawnEnv.CIARA_LOCAL_BASE_URL = localBaseUrl;
+  if (localApiKey) spawnEnv.CIARA_LOCAL_API_KEY = localApiKey;
+  if (typeof savedCreds?.local_supports_tools !== "undefined") {
+    spawnEnv.CIARA_LOCAL_SUPPORTS_TOOLS = savedCreds.local_supports_tools ? "1" : "0";
+  }
+  if (typeof savedCreds?.local_supports_vision !== "undefined") {
+    spawnEnv.CIARA_LOCAL_SUPPORTS_VISION = savedCreds.local_supports_vision ? "1" : "0";
+  }
   const geminiModel = (savedCreds?.gemini_model ?? "").trim();
   if (geminiModel) {
     spawnEnv.GEMINI_FAST_MODEL = geminiModel;
@@ -671,18 +708,26 @@ async function startPythonBackendInner() {
     sleep(10000).then(() => false)
   ]);
   if (ready) {
+    lastBackendStartDetail = `Backend ready at ${BACKEND_WS_URL}.`;
     return true;
   }
 
   if (await canReachBackend()) {
+    lastBackendStartDetail = `Backend became reachable at ${BACKEND_WS_URL}.`;
     return true;
   }
 
   if (sawAddressInUse && await canReachBackend()) {
     console.log(`[Backend] Reusing backend that is already listening at ${BACKEND_WS_URL}`);
+    lastBackendStartDetail = `Another CIARA backend was already running at ${BACKEND_WS_URL}; reusing it.`;
     return true;
   }
 
+  if (sawAddressInUse) {
+    lastBackendStartDetail = "Port 8000 is already in use by another app, so CIARA could not bind its backend.";
+  } else {
+    lastBackendStartDetail = "Backend process started, but it did not become ready in time.";
+  }
   console.error("[Backend] Backend did not become ready in time.");
   return false;
 }
@@ -695,6 +740,87 @@ function stopPythonBackend() {
     pythonProcess = null;
     ownsPythonProcess = false;
   }
+}
+
+function runOllama(args, timeoutMs = 10000) {
+  const result = spawnSync("ollama", args, {
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: timeoutMs,
+  });
+  if (result.error) {
+    return { ok: false, error: result.error.message, stdout: result.stdout || "", stderr: result.stderr || "" };
+  }
+  return {
+    ok: result.status === 0,
+    stdout: result.stdout || "",
+    stderr: result.stderr || "",
+    status: result.status,
+  };
+}
+
+function parseOllamaList(output) {
+  const lines = String(output || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length <= 1) return [];
+  return lines.slice(1).map((line) => {
+    const [name, id, size, ...rest] = line.split(/\s{2,}|\t+/).filter(Boolean);
+    return {
+      name: name || "",
+      id: id || "",
+      size: size || "",
+      modified: rest.join(" "),
+    };
+  }).filter((item) => item.name);
+}
+
+function getOllamaStatus() {
+  const version = runOllama(["--version"], 4000);
+  if (!version.ok) {
+    return { installed: false, running: false, models: [], error: version.error || version.stderr || "Ollama is not installed." };
+  }
+  const list = runOllama(["list"], 6000);
+  return {
+    installed: true,
+    running: list.ok,
+    version: String(version.stdout || version.stderr || "").trim(),
+    models: list.ok ? parseOllamaList(list.stdout) : [],
+    error: list.ok ? "" : (list.error || list.stderr || "Ollama is installed but not responding."),
+  };
+}
+
+function pullOllamaModel(modelName) {
+  return new Promise((resolve) => {
+    const model = String(modelName || "").trim();
+    if (!model) {
+      resolve({ ok: false, error: "No Ollama model was selected." });
+      return;
+    }
+    const pull = spawn("ollama", ["pull", model], {
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    pull.stdout.on("data", (data) => {
+      const text = data.toString();
+      output += text;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("ollama:progress", text);
+      }
+    });
+    pull.stderr.on("data", (data) => {
+      const text = data.toString();
+      output += text;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("ollama:progress", text);
+      }
+    });
+    pull.on("error", (err) => {
+      resolve({ ok: false, error: err.message, output });
+    });
+    pull.on("close", (code) => {
+      resolve({ ok: code === 0, error: code === 0 ? "" : `ollama pull exited with code ${code}`, output });
+    });
+  });
 }
 
 function emitStartListening() {
@@ -780,17 +906,18 @@ function createWindow() {
     y: display.workArea.y,
     show: true,
     frame: false,
-    transparent: true,
+    titleBarStyle: "hidden",
+    transparent: !firstLaunch,
     resizable: true,
     movable: true,
-    hasShadow: false,
+    hasShadow: firstLaunch,
     alwaysOnTop: !firstLaunch,
     skipTaskbar: !firstLaunch,
     minimizable: true,
     maximizable: true,
     closable: true,
     icon: windowIcon,
-    backgroundColor: "#00000000",
+    backgroundColor: firstLaunch ? "#0d0d0d" : "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -1010,6 +1137,7 @@ function sendToRenderer(channel, ...args) {
 
 app.whenReady().then(async () => {
   await configureMicrophonePermissions();
+  Menu.setApplicationMenu(null);
 
   // Create window first so setup:progress events can reach the renderer
   createWindow();
@@ -1034,6 +1162,10 @@ app.whenReady().then(async () => {
       registerHotkey();
     }
   });
+});
+
+app.on("second-instance", () => {
+  showMainWindow();
 });
 
 ipcMain.handle("overlay:hide", () => {
@@ -1065,6 +1197,18 @@ ipcMain.handle("window:set-onboarding-mode", (event, active) => {
     setNormalWindowMode();
   } else {
     setOverlayWindowMode();
+  }
+  return true;
+});
+
+ipcMain.handle("window:set-automation-lock", (event, active) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const locked = Boolean(active);
+  if (locked) {
+    mainWindow.showInactive?.();
+  }
+  if (!onboardingWindowMode) {
+    setMousePassthrough(true);
   }
   return true;
 });
@@ -1166,14 +1310,22 @@ ipcMain.handle("app:get-venv-path", () => getVenvRoot());
 
 ipcMain.handle("backend:start", async () => {
   const ok = await startPythonBackend();
-  return { ok };
+  return { ok, detail: lastBackendStartDetail };
 });
 
 ipcMain.handle("backend:restart", async () => {
   stopPythonBackend();
   await sleep(500);
   const ok = await startPythonBackend();
-  return { ok };
+  return { ok, detail: lastBackendStartDetail };
+});
+
+ipcMain.handle("ollama:status", () => {
+  return getOllamaStatus();
+});
+
+ipcMain.handle("ollama:pull", async (_event, modelName) => {
+  return pullOllamaModel(modelName);
 });
 
 ipcMain.handle("app:get-data-dir-path", () => {

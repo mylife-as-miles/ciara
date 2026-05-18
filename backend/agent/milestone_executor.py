@@ -125,7 +125,8 @@ CRITICAL RULES:
 17. After `open_app`, ALWAYS call `read_screen` first before any other UI tool. This confirms the app is actually visible and gives you the UI layout for accurate interactions.
 18. If `get_ui_tree` times out or returns nothing useful, fall back to `read_screen` + `click_ui` to interact visually instead. Do NOT retry `get_ui_tree` with the same arguments.
 19. Do NOT use keyboard shortcuts (e.g., `command+f`) in desktop chat apps. Instead use `click_ui` to click buttons and UI elements directly — they are more reliable across different app versions.
-20. If `type_in_field` cannot find a field, try `click_ui` to click the target area first, then use `type_text` to type into the now-focused field."""
+20. If `type_in_field` cannot find a field, try `click_ui` to click the target area first, then use `type_text` to type into the now-focused field.
+21. Checked automation rule: choose exactly ONE next action. After any UI-mutating action, wait for the tool result/verification and inspect the updated environment before choosing another UI action. Never assume a click, keypress, or app switch worked just because the tool returned."""
 
 MILESTONE_EXECUTOR_PROMPT = """\
 ## Overall Task

@@ -7,6 +7,7 @@ const State = Object.freeze({
   LISTENING: "LISTENING",
   LOADING: "LOADING",
   DOING: "DOING",
+  PAUSED: "PAUSED",
   RESPONDING: "RESPONDING"
 });
 
@@ -20,8 +21,11 @@ const bridge = window.overlayAPI || {
   closeWindow: async () => { },
   isWindowMaximized: async () => false,
   onWindowMaximizedChange: () => () => { },
+  setOnboardingMode: async () => false,
+  onWindowModeChange: () => () => { },
   enableMouse: () => { },
   disableMouse: () => { },
+  setAutomationLock: async () => false,
   onStartListening: () => () => { },
   onOverlayHidden: () => () => { },
   logError: () => { },
@@ -35,6 +39,9 @@ const bridge = window.overlayAPI || {
   getPlatform: async () => "",
   getVenvPath: async () => "",
   startBackend: async () => ({ ok: false }),
+  getOllamaStatus: async () => ({ installed: false, running: false, models: [] }),
+  pullOllamaModel: async () => ({ ok: false }),
+  onOllamaProgress: () => () => { },
   exportExtension: async () => ({ success: false }),
   revealExtension: async () => false,
   onSetupProgress: () => () => { },
@@ -65,10 +72,14 @@ const uiLoading = document.getElementById("ui-loading");
 const uiDoing = document.getElementById("ui-doing");
 const glow = document.getElementById("glow");
 const stageEl = document.querySelector('.stage');
+const automationLockEl = document.getElementById("automation-lock");
+const automationLockLabelEl = document.getElementById("automation-lock-label");
 const uiResponse = document.getElementById("ui-response");
 const statusEl = document.getElementById("status-text");
 const doingTextEl = document.getElementById("doing-text");
 const appIconEl = document.getElementById("app-icon");
+const ciaraCursor = document.getElementById("ciara-cursor");
+const ciaraCursorLabel = document.getElementById("ciara-cursor-label");
 const typewriterText = document.getElementById("typewriter-text");
 const typewriterCursor = document.getElementById("typewriter-cursor");
 const responseTextEl = document.getElementById("response-text");
@@ -96,7 +107,10 @@ const settingsOverlay = document.getElementById("settings-overlay");
 const settingsLinkAistudio = document.getElementById("settings-link-aistudio");
 const settingsLinkPicovoice = document.getElementById("settings-link-picovoice");
 const settingsLinkEleven = document.getElementById("settings-link-eleven");
+const settingsLlmProvider = document.getElementById("settings-llm-provider");
 const settingsGeminiKey = document.getElementById("settings-gemini-key");
+const settingsLocalModel = document.getElementById("settings-local-model");
+const settingsLocalBaseUrl = document.getElementById("settings-local-base-url");
 const settingsPicovoiceKey = document.getElementById("settings-picovoice-key");
 const settingsElevenlabsKey = document.getElementById("settings-elevenlabs-key");
 const settingsElevenlabsVoice = document.getElementById("settings-elevenlabs-voice");
@@ -198,11 +212,94 @@ const app = {
   agents: {},           // id -> agent state
   runningAgents: 0,
   totalAgents: 0,
+  currentTaskId: null,
+  automationLock: false,
+  automationLockToolCount: 0,
   commandPanelOpen: false,
   commandSending: false,
   currentPlanId: null,  // active plan modal correlation id
   _skipAfterModalShow: false,  // Multi-modal flag: skip individual afterModalShow calls
+  cursorHideTimer: null,
 };
+
+function setCiaraCursorPosition(x, y) {
+  if (!ciaraCursor) return;
+  const rawX = Number.isFinite(Number(x)) ? Number(x) : window.innerWidth / 2;
+  const rawY = Number.isFinite(Number(y)) ? Number(y) : window.innerHeight / 2;
+  const safeX = Math.max(18, Math.min(window.innerWidth - 18, rawX));
+  const safeY = Math.max(18, Math.min(window.innerHeight - 18, rawY));
+  ciaraCursor.style.setProperty("--cursor-x", `${Math.round(safeX)}px`);
+  ciaraCursor.style.setProperty("--cursor-y", `${Math.round(safeY)}px`);
+}
+
+function showCiaraCursor({ x, y, label = "CIARA", autoHideMs = 5200 } = {}) {
+  if (!ciaraCursor) return;
+  if (app.cursorHideTimer) {
+    clearTimeout(app.cursorHideTimer);
+    app.cursorHideTimer = null;
+  }
+  setCiaraCursorPosition(x, y);
+  if (ciaraCursorLabel) ciaraCursorLabel.textContent = label || "CIARA";
+  ciaraCursor.classList.remove("hidden");
+  if (autoHideMs > 0) {
+    app.cursorHideTimer = window.setTimeout(() => hideCiaraCursor(), autoHideMs);
+  }
+}
+
+function hideCiaraCursor() {
+  if (!ciaraCursor) return;
+  ciaraCursor.classList.add("hidden");
+  ciaraCursor.classList.remove("is-clicking", "is-dragging");
+  if (app.cursorHideTimer) {
+    clearTimeout(app.cursorHideTimer);
+    app.cursorHideTimer = null;
+  }
+}
+
+function pulseCiaraCursor(kind = "click") {
+  if (!ciaraCursor) return;
+  const cls = kind === "drag" ? "is-dragging" : "is-clicking";
+  ciaraCursor.classList.remove(cls);
+  void ciaraCursor.offsetWidth;
+  ciaraCursor.classList.add(cls);
+  if (cls === "is-clicking") {
+    window.setTimeout(() => ciaraCursor?.classList.remove(cls), 460);
+  }
+}
+
+function handleAutomationCursor(payload = {}) {
+  const action = String(payload.action || "move").toLowerCase();
+  if (action === "hide") {
+    hideCiaraCursor();
+    return;
+  }
+
+  const x = Number(payload.x);
+  const y = Number(payload.y);
+  const label = payload.label || (action === "click" ? "CLICK" : action === "drag" ? "DRAG" : "CIARA");
+  const useCenter = payload.position === "center";
+  showCiaraCursor({
+    x: useCenter ? window.innerWidth / 2 : x,
+    y: useCenter ? window.innerHeight / 2 : y,
+    label,
+    autoHideMs: Number(payload.autoHideMs || 5200)
+  });
+
+  if (action === "click" || action === "double" || action === "right") {
+    pulseCiaraCursor("click");
+    return;
+  }
+
+  if (action === "drag") {
+    pulseCiaraCursor("drag");
+    const x2 = Number(payload.x2);
+    const y2 = Number(payload.y2);
+    window.setTimeout(() => {
+      setCiaraCursorPosition(x2, y2);
+      window.setTimeout(() => ciaraCursor?.classList.remove("is-dragging"), 520);
+    }, 180);
+  }
+}
 
 /* ── UI State Management ── */
 function setIslandState(nextStateClass) {
@@ -233,6 +330,12 @@ function clearConnectionLostTimer() {
   app.connectionLostTimer = null;
 }
 
+function clearReconnectTimer() {
+  if (!app.reconnectTimer) return;
+  clearTimeout(app.reconnectTimer);
+  app.reconnectTimer = null;
+}
+
 function shouldStreamAudioChunk() {
   return isWebSocketOpen()
     && (app.current === State.IDLE || app.current === State.LISTENING)
@@ -244,6 +347,34 @@ function closeWebSocketQuietly() {
   if (!app.ws || app.ws.readyState > WebSocket.OPEN) return;
   app.suppressNextSocketCloseNotice = true;
   app.ws.close();
+}
+
+function appendSetupLogLine(text, { expand = true } = {}) {
+  if (!setupLogEl) return;
+  const line = String(text || "").trim();
+  if (!line) return;
+  const lines = `${setupLogEl.textContent || ""}\n${line}`
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(-80);
+  setupLogEl.textContent = lines.join("\n");
+  if (expand && onboardingLogPanel) {
+    onboardingLogPanel.classList.add("is-expanded");
+    if (onboardingLogToggle) onboardingLogToggle.setAttribute("aria-expanded", "true");
+  }
+}
+
+async function establishFreshWebSocketConnection(timeoutMs = 20000) {
+  clearReconnectTimer();
+  try {
+    closeWebSocketQuietly();
+  } catch {
+    // ignore
+  }
+  app.ws = null;
+  connectWebSocket();
+  return waitForWebSocketOpen(timeoutMs);
 }
 
 async function recoverBackendAfterDisconnect() {
@@ -333,6 +464,13 @@ function setState(next, { tier = "", text = null, appName = "", iconUrl = "", fo
       appIconEl.style.display = 'none';
     }
   }
+  else if (next === State.PAUSED) {
+    glow.classList.add('active');
+    setIslandState('state-doing');
+    switchContent(uiDoing);
+    if (text) doingTextEl.innerText = truncateToWords(text, 4);
+    appIconEl.style.display = 'none';
+  }
   else if (next === State.RESPONDING) {
     glow.classList.add('active');
     setIslandState('state-loading');
@@ -340,12 +478,12 @@ function setState(next, { tier = "", text = null, appName = "", iconUrl = "", fo
   }
 
   // AI Analysis mode — drives the glassmorphism "active analysis" visuals
-  glow.classList.toggle('analyzing', next === State.DOING || next === State.LOADING);
-  if (stageEl) stageEl.classList.toggle('analyzing', next === State.DOING);
+  glow.classList.toggle('analyzing', next === State.DOING || next === State.LOADING || next === State.PAUSED);
+  if (stageEl) stageEl.classList.toggle('analyzing', next === State.DOING || next === State.PAUSED);
 
   // Show stop button when agent is working
   if (pillStopBtn) {
-    const working = next === State.DOING || next === State.LOADING;
+    const working = next === State.DOING || next === State.LOADING || next === State.PAUSED;
     pillStopBtn.classList.toggle('hidden', !working);
   }
 }
@@ -356,6 +494,8 @@ function clearCommandContext() {
   appIconEl.src = "";
   appIconEl.style.display = 'none';
   app.currentPlanId = null;
+  app.automationLockToolCount = 0;
+  void setAutomationLock(false);
 }
 
 function setMouseEnabled(enabled) {
@@ -364,6 +504,39 @@ function setMouseEnabled(enabled) {
   app.mouseEnabled = next;
   next ? bridge.enableMouse() : bridge.disableMouse();
   document.body.classList.toggle('mouse-enabled', next);
+}
+
+async function setAutomationLock(active, label = "CIARA is controlling the screen") {
+  const next = Boolean(active);
+  app.automationLock = next;
+  if (automationLockEl) automationLockEl.classList.toggle("hidden", !next);
+  if (automationLockLabelEl) automationLockLabelEl.textContent = label;
+  setMouseEnabled(isOverInteractive({ clientX: lastPointer.x, clientY: lastPointer.y }));
+  try {
+    await bridge.setAutomationLock?.(next);
+  } catch (err) {
+    console.warn("[AutomationLock] main-process sync failed:", err);
+  }
+}
+
+function isAutomationMutatingTool(toolName) {
+  return new Set([
+    "click_ui",
+    "type_in_field",
+    "type_text",
+    "press_key",
+    "run_shortcut",
+    "click_element",
+    "hover_element",
+    "mouse_action",
+    "browser_click_ref",
+    "browser_type_ref",
+    "browser_select_ref",
+    "browser_click_match",
+    "find_and_act",
+    "open_app",
+    "open_url",
+  ]).has(String(toolName || "").trim());
 }
 
 function openCommandPanel(prefill = "") {
@@ -1515,6 +1688,57 @@ function connectWebSocket() {
 
       console.log("[WS] Received:", msg);
 
+      if (msg.type === "task_event") {
+        if (msg.phase === "start") {
+          app.currentTaskId = msg.taskId || null;
+        } else if (msg.phase === "cancelled") {
+          app.automationLockToolCount = 0;
+          void setAutomationLock(false);
+        } else if (msg.taskId && msg.taskId === app.currentTaskId) {
+          app.currentTaskId = null;
+          app.automationLockToolCount = 0;
+          void setAutomationLock(false);
+        }
+        return;
+      }
+
+      if (msg.taskId && app.currentTaskId && msg.taskId !== app.currentTaskId) {
+        console.debug("[WS] Ignoring stale task message:", msg.taskId, "current:", app.currentTaskId);
+        return;
+      }
+
+      if (msg.type === "tool_event") {
+        const mutating = isAutomationMutatingTool(msg.tool);
+        if (msg.phase === "start") {
+          if (mutating) {
+            app.automationLockToolCount += 1;
+            void setAutomationLock(true, `CIARA is controlling: ${msg.tool}`);
+          }
+          setState(State.DOING, {
+            text: msg.tool ? `Running ${msg.tool}` : "Working...",
+            force: true
+          });
+        } else if (msg.phase === "paused") {
+          clearWorkWatchdog();
+          setState(State.PAUSED, {
+            text: msg.message || "Paused: the screen did not visibly change",
+            force: true
+          });
+          showResponseCard(msg.message || "CIARA paused because the last action did not visibly change the screen.");
+        } else if (msg.phase === "result" && mutating) {
+          app.automationLockToolCount = Math.max(0, app.automationLockToolCount - 1);
+          if (app.automationLockToolCount === 0) {
+            void setAutomationLock(false);
+          }
+        }
+        return;
+      }
+
+      if (msg.type === "automation_cursor") {
+        handleAutomationCursor(msg.payload || msg);
+        return;
+      }
+
       // ── Agent message types ──
 
       // 1. "thinking" — Agent is reasoning (show bouncing dots)
@@ -1752,7 +1976,9 @@ const onboardingCard = document.getElementById("onboarding-card");
 const onboardingBack = document.getElementById("onboarding-back");
 const onboardingStart = document.getElementById("onboarding-start");
 const onboardingChoiceApi = document.getElementById("onboarding-choice-api");
-const onboardingSteps = [onboardingStep0, onboardingStepChoice, onboardingStep1, onboardingStepModel, onboardingStep2, onboardingStep3, onboardingStepVoiceSelect, onboardingStep4, onboardingStep5];
+const onboardingChoiceLocal = document.getElementById("onboarding-choice-local");
+const onboardingStepLocalModel = document.getElementById("onboarding-step-local-model");
+const onboardingSteps = [onboardingStep0, onboardingStepChoice, onboardingStepLocalModel, onboardingStep1, onboardingStepModel, onboardingStep2, onboardingStep3, onboardingStepVoiceSelect, onboardingStep4, onboardingStep5];
 const onboardingProgressDots = Array.from(document.querySelectorAll("[data-onboarding-progress]"));
 let onboardingStepIndex = 0;
 
@@ -1802,7 +2028,7 @@ function showOnboardingStep(index) {
     dot.classList.toggle("active", dotIndex === progressIndex);
     dot.classList.toggle("complete", dotIndex < progressIndex);
   });
-  onboardingBack?.classList.toggle("hidden", onboardingStepIndex === 0 || onboardingStepIndex >= 7);
+  onboardingBack?.classList.toggle("hidden", onboardingStepIndex === 0 || onboardingStepIndex >= 8);
 }
 
 async function runOnboarding() {
@@ -1816,6 +2042,7 @@ async function runOnboarding() {
   await hydrateWindowsOnboardingHints();
 
   await bridge.setOnboardingMode?.(true);
+  setWindowModeClass("normal");
   setMouseEnabled(true);
   onboardingBoot?.classList.remove("hidden", "is-dismissing");
   onboardingCard?.classList.add("hidden");
@@ -1853,9 +2080,23 @@ const openElevenlabsLink = document.getElementById("onboarding-open-elevenlabs")
 let onboardingElevenlabsVoices = [];
 let selectedElevenlabsVoiceId = "";
 let selectedGeminiModel = "gemma-4-26b-a4b-it";
+let selectedLocalRuntime = "ollama";
+let selectedLocalModel = "gemma-4-26b-a4b-it";
 let activeVoicePreviewAudio = null;
 let activeVoicePreviewUrl = "";
 let activeVoicePreviewButton = null;
+
+const localRuntimeTabs = Array.from(document.querySelectorAll(".local-runtime-tab"));
+const localRuntimePanels = Array.from(document.querySelectorAll(".local-runtime-panel"));
+const localModelRows = Array.from(document.querySelectorAll(".local-model-row"));
+const localModelStatus = document.getElementById("local-model-status");
+const localCustomStatus = document.getElementById("local-custom-status");
+const localCustomBaseUrl = document.getElementById("local-custom-base-url");
+const localCustomModel = document.getElementById("local-custom-model");
+const ollamaStatusText = document.getElementById("ollama-status-text");
+const ollamaRefresh = document.getElementById("ollama-refresh");
+const nextLocalBtn = document.getElementById("onboarding-next-local");
+const nextLocalBtnLabel = nextLocalBtn?.querySelector(".onboarding-btn-label");
 
 if (onboardingStart) {
   onboardingStart.addEventListener("click", () => {
@@ -1865,8 +2106,174 @@ if (onboardingStart) {
 
 if (onboardingChoiceApi) {
   onboardingChoiceApi.addEventListener("click", () => {
-    showOnboardingStep(2);
+    showOnboardingStep(3);
     geminiKeyInput?.focus();
+  });
+}
+
+if (onboardingChoiceLocal) {
+  onboardingChoiceLocal.addEventListener("click", () => {
+    showOnboardingStep(2);
+    refreshOllamaStatus();
+  });
+}
+
+function setLocalRuntime(runtime) {
+  selectedLocalRuntime = runtime === "custom" ? "custom" : "ollama";
+  localRuntimeTabs.forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.localRuntime === selectedLocalRuntime);
+  });
+  localRuntimePanels.forEach((panel) => {
+    panel.classList.toggle("active", panel.id === `local-runtime-${selectedLocalRuntime}`);
+  });
+}
+
+function setLocalModel(modelId) {
+  selectedLocalModel = modelId || selectedLocalModel;
+  localModelRows.forEach((row) => {
+    const selected = row.dataset.modelId === selectedLocalModel;
+    row.classList.toggle("selected", selected);
+    row.setAttribute("aria-checked", selected ? "true" : "false");
+  });
+}
+
+function markInstalledOllamaModels(models) {
+  const installed = new Set((models || []).map((model) => String(model.name || "").toLowerCase()));
+  localModelRows.forEach((row) => {
+    const modelId = String(row.dataset.modelId || "").toLowerCase();
+    const isInstalled = installed.has(modelId);
+    row.classList.toggle("installed", isInstalled);
+    const action = row.querySelector(".local-model-action");
+    if (action) action.textContent = isInstalled ? "Use" : "Download";
+  });
+}
+
+async function ensureOllamaModelAvailable(modelId, { updatePrimaryCta = false } = {}) {
+  const status = await bridge.getOllamaStatus?.();
+  const installed = new Set((status?.models || []).map((model) => String(model.name || "").toLowerCase()));
+  if (installed.has(String(modelId || "").toLowerCase())) {
+    markInstalledOllamaModels(status?.models || []);
+    return { ok: true, downloaded: false };
+  }
+
+  const selectedRow = localModelRows.find((row) => row.dataset.modelId === modelId);
+  const action = selectedRow?.querySelector(".local-model-action");
+  const previousActionLabel = action?.textContent || "";
+  const previousPrimaryLabel = nextLocalBtnLabel?.textContent || "";
+
+  if (action) action.textContent = "Downloading...";
+  if (updatePrimaryCta && nextLocalBtnLabel) nextLocalBtnLabel.textContent = "Downloading...";
+  setOnboardingStatus(localModelStatus, `Downloading ${modelId} from Ollama...`);
+
+  const pulled = await bridge.pullOllamaModel?.(modelId);
+  if (!pulled?.ok) {
+    if (action) action.textContent = previousActionLabel || "Download";
+    if (updatePrimaryCta && nextLocalBtnLabel) nextLocalBtnLabel.textContent = previousPrimaryLabel || "Use Local Model";
+    return { ok: false, error: pulled?.error || "Could not download the model in Ollama." };
+  }
+
+  const refreshed = await bridge.getOllamaStatus?.();
+  markInstalledOllamaModels(refreshed?.models || []);
+  if (updatePrimaryCta && nextLocalBtnLabel) nextLocalBtnLabel.textContent = previousPrimaryLabel || "Use Local Model";
+  setOnboardingStatus(localModelStatus, `${modelId} is ready in Ollama.`);
+  return { ok: true, downloaded: true };
+}
+
+async function refreshOllamaStatus() {
+  if (!ollamaStatusText) return;
+  ollamaStatusText.textContent = "Checking Ollama...";
+  try {
+    const status = await bridge.getOllamaStatus?.();
+    if (!status?.installed) {
+      ollamaStatusText.textContent = "Ollama is not installed.";
+      setOnboardingStatus(localModelStatus, "Install Ollama, then come back and refresh.", true);
+      markInstalledOllamaModels([]);
+      return;
+    }
+    if (!status.running) {
+      ollamaStatusText.textContent = "Ollama is installed but not running.";
+      setOnboardingStatus(localModelStatus, status.error || "Start Ollama, then refresh.", true);
+      markInstalledOllamaModels([]);
+      return;
+    }
+    ollamaStatusText.textContent = `${status.models?.length || 0} local models found.`;
+    setOnboardingStatus(localModelStatus, "Choose a model. CIARA will download it if it is missing.");
+    markInstalledOllamaModels(status.models || []);
+  } catch {
+    ollamaStatusText.textContent = "Could not check Ollama.";
+    setOnboardingStatus(localModelStatus, "Ollama status check failed.", true);
+  }
+}
+
+localRuntimeTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setLocalRuntime(tab.dataset.localRuntime));
+});
+
+localModelRows.forEach((row) => {
+  row.addEventListener("click", () => setLocalModel(row.dataset.modelId));
+  row.querySelector(".local-model-action")?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const modelId = row.dataset.modelId || "";
+    setLocalModel(modelId);
+    const result = await ensureOllamaModelAvailable(modelId);
+    if (!result.ok) {
+      setOnboardingStatus(localModelStatus, result.error || "Could not download the model in Ollama.", true);
+    }
+  });
+});
+
+ollamaRefresh?.addEventListener("click", () => refreshOllamaStatus());
+
+bridge.onOllamaProgress?.((text) => {
+  const cleaned = String(text || "").trim().split(/\r?\n/).pop();
+  if (cleaned) setOnboardingStatus(localModelStatus, cleaned);
+});
+
+if (nextLocalBtn) {
+  nextLocalBtn.addEventListener("click", async () => {
+    const existing = await bridge.loadCredentials?.() ?? {};
+    nextLocalBtn.disabled = true;
+    if (nextLocalBtnLabel) nextLocalBtnLabel.textContent = selectedLocalRuntime === "ollama" ? "Preparing..." : "Saving...";
+
+    try {
+      if (selectedLocalRuntime === "custom") {
+        const baseUrl = localCustomBaseUrl?.value.trim() || "http://127.0.0.1:8080/v1";
+        const model = localCustomModel?.value.trim();
+        if (!model) {
+          setOnboardingStatus(localCustomStatus, "Enter the model name served by your local endpoint.", true);
+          localCustomModel?.focus();
+          return;
+        }
+        await bridge.saveCredentials?.({
+          ...existing,
+          llm_provider: "openai-compatible-local",
+          local_base_url: baseUrl,
+          local_model: model,
+          local_supports_tools: true,
+          local_supports_vision: false,
+        });
+      } else {
+        const ensured = await ensureOllamaModelAvailable(selectedLocalModel, { updatePrimaryCta: true });
+        if (!ensured.ok) {
+          setOnboardingStatus(localModelStatus, ensured.error || "Could not download the model in Ollama.", true);
+          return;
+        }
+        await bridge.saveCredentials?.({
+          ...existing,
+          llm_provider: "ollama",
+          local_base_url: "http://127.0.0.1:11434/v1",
+          local_model: selectedLocalModel,
+          local_supports_tools: true,
+          local_supports_vision: selectedLocalModel.startsWith("gemma-4-"),
+        });
+      }
+      showOnboardingStep(5);
+      picovoiceKeyInput?.focus();
+    } finally {
+      nextLocalBtn.disabled = false;
+      if (nextLocalBtnLabel) nextLocalBtnLabel.textContent = "Use Local Model";
+    }
   });
 }
 
@@ -1939,7 +2346,10 @@ if (picovoiceKeyInput) picovoiceKeyInput.value = BUNDLED_PICOVOICE_KEY;
 // ── Settings (hotkey / overlay) ──
 async function populateSettingsForm() {
   const creds = await bridge.loadCredentials?.() ?? {};
+  if (settingsLlmProvider) settingsLlmProvider.value = creds.llm_provider || "gemini";
   if (settingsGeminiKey) settingsGeminiKey.value = creds.gemini_api_key || "";
+  if (settingsLocalModel) settingsLocalModel.value = creds.local_model || "";
+  if (settingsLocalBaseUrl) settingsLocalBaseUrl.value = creds.local_base_url || "http://127.0.0.1:11434/v1";
   if (settingsPicovoiceKey) {
     const p = (creds.picovoice_key || "").trim();
     settingsPicovoiceKey.value = p || BUNDLED_PICOVOICE_KEY;
@@ -2019,14 +2429,33 @@ if (settingsLinkEleven) {
     openExternalUrl("https://elevenlabs.io/app/settings/api-keys");
   });
 }
+settingsLlmProvider?.addEventListener("change", () => {
+  if (!settingsLocalBaseUrl) return;
+  if (settingsLlmProvider.value === "ollama" && !settingsLocalBaseUrl.value.trim()) {
+    settingsLocalBaseUrl.value = "http://127.0.0.1:11434/v1";
+  }
+  if (settingsLlmProvider.value === "openai-compatible-local" && !settingsLocalBaseUrl.value.trim()) {
+    settingsLocalBaseUrl.value = "http://127.0.0.1:8080/v1";
+  }
+});
 if (settingsCancel) settingsCancel.addEventListener("click", () => closeSettings());
 
 if (settingsSave) {
   settingsSave.addEventListener("click", async () => {
+    const provider = settingsLlmProvider?.value || "gemini";
     const geminiKey = settingsGeminiKey?.value.trim() ?? "";
-    if (!geminiKey) {
+    const localModel = settingsLocalModel?.value.trim() ?? "";
+    const localBaseUrl = settingsLocalBaseUrl?.value.trim() ?? "";
+    if (provider === "gemini" && !geminiKey) {
       if (settingsStatus) {
         settingsStatus.textContent = "Gemini API key is required.";
+        settingsStatus.classList.add("error");
+      }
+      return;
+    }
+    if (provider !== "gemini" && (!localModel || !localBaseUrl)) {
+      if (settingsStatus) {
+        settingsStatus.textContent = "Local model and base URL are required.";
         settingsStatus.classList.add("error");
       }
       return;
@@ -2042,7 +2471,22 @@ if (settingsSave) {
       const picoKey = settingsPicovoiceKey?.value.trim() ?? "";
       const elKey = settingsElevenlabsKey?.value.trim() ?? "";
       const elVoice = settingsElevenlabsVoice?.value.trim() ?? "";
-      const newCreds = { ...existing, gemini_api_key: geminiKey };
+      const newCreds = {
+        ...existing,
+        llm_provider: provider,
+        gemini_api_key: geminiKey,
+      };
+      if (provider === "ollama") {
+        newCreds.local_base_url = localBaseUrl || "http://127.0.0.1:11434/v1";
+        newCreds.local_model = localModel || "gemma-4-26b-a4b-it";
+        newCreds.local_supports_tools = true;
+        newCreds.local_supports_vision = newCreds.local_model.startsWith("gemma-4-");
+      } else if (provider === "openai-compatible-local") {
+        newCreds.local_base_url = localBaseUrl;
+        newCreds.local_model = localModel;
+        newCreds.local_supports_tools = true;
+        newCreds.local_supports_vision = false;
+      }
       if (picoKey) newCreds.picovoice_key = picoKey;
       if (elKey) {
         newCreds.elevenlabs_api_key = elKey;
@@ -2350,7 +2794,7 @@ if (next0Btn) {
       geminiKeyInput?.focus();
       return;
     }
-    showOnboardingStep(3);
+    showOnboardingStep(4);
     nextModelBtn?.focus();
   }, true);
 }
@@ -2359,7 +2803,7 @@ if (nextModelBtn) {
   nextModelBtn.addEventListener("click", async () => {
     const geminiKey = geminiKeyInput?.value.trim() ?? "";
     if (!geminiKey) {
-      showOnboardingStep(2);
+      showOnboardingStep(3);
       geminiKeyInput?.focus();
       return;
     }
@@ -2371,14 +2815,14 @@ if (nextModelBtn) {
       gemini_model: selectedGeminiModel,
     });
 
-    showOnboardingStep(4);
+    showOnboardingStep(5);
     picovoiceKeyInput?.focus();
   });
 }
 
 if (nextWakeBtn) {
   nextWakeBtn.addEventListener("click", () => {
-    showOnboardingStep(5);
+    showOnboardingStep(6);
     elevenlabsKeyInput?.focus();
   });
 }
@@ -2386,8 +2830,10 @@ if (nextWakeBtn) {
 if (nextVoiceBtn) {
   nextVoiceBtn.addEventListener("click", async () => {
     const geminiKey = geminiKeyInput?.value.trim() ?? "";
-    if (!geminiKey) {
-      showOnboardingStep(2);
+    const savedCreds = await bridge.loadCredentials?.() ?? {};
+    const provider = savedCreds.llm_provider || "gemini";
+    if (provider === "gemini" && !geminiKey && !savedCreds.gemini_api_key) {
+      showOnboardingStep(3);
       geminiKeyInput?.focus();
       return;
     }
@@ -2410,7 +2856,7 @@ if (nextVoiceBtn) {
       }
       renderElevenlabsVoices(onboardingElevenlabsVoices);
       setOnboardingStatus(elevenlabsVoiceStatus, `${onboardingElevenlabsVoices.length} voices loaded. Choose one to continue.`);
-      showOnboardingStep(6);
+      showOnboardingStep(7);
     } catch (error) {
       setOnboardingStatus(elevenlabsStatus, error?.message || "Could not load ElevenLabs voices. Check your API key.", true);
       elevenlabsKeyInput?.focus();
@@ -2437,7 +2883,7 @@ if (nextVoiceSelectBtn) {
     const existing = await bridge.loadCredentials?.() ?? {};
     const newCreds = {
       ...existing,
-      gemini_api_key: geminiKey,
+      gemini_api_key: geminiKey || existing.gemini_api_key || "",
       gemini_model: selectedGeminiModel,
       elevenlabs_api_key: elKey,
       elevenlabs_voice_id: selectedElevenlabsVoiceId,
@@ -2445,7 +2891,7 @@ if (nextVoiceSelectBtn) {
     if (picoKey) newCreds.picovoice_key = picoKey;
     await bridge.saveCredentials?.(newCreds);
 
-    showOnboardingStep(7);
+    showOnboardingStep(8);
     runSetupChecklist();
     if (nextVoiceSelectBtnLabel) nextVoiceSelectBtnLabel.textContent = "Save & Continue";
   });
@@ -2457,9 +2903,17 @@ const checkMicEl = document.getElementById("check-mic");
 const setupLogEl = document.getElementById("onboarding-setup-log");
 const next2Btn = document.getElementById("onboarding-next-2");
 
-function setCheck(el, state) {
+function setCheck(el, state, detail = "") {
   if (!el) return;
   const icon = el.querySelector(".check-icon");
+  const label = el.querySelector(".check-label");
+  if (label && !label.dataset.baseLabel) {
+    label.dataset.baseLabel = label.textContent || "";
+  }
+  if (label) {
+    const base = label.dataset.baseLabel || label.textContent || "";
+    label.textContent = detail ? `${base} - ${detail}` : base;
+  }
   el.classList.remove("ok", "fail", "pending");
   if (state === "ok") {
     el.classList.add("ok");
@@ -2487,19 +2941,7 @@ if (onboardingLogToggle && onboardingLogPanel) {
 
 if (bridge.onSetupProgress) {
   bridge.onSetupProgress((text) => {
-    if (!setupLogEl) return;
-    const line = String(text || "").trim();
-    if (!line) return;
-    const lines = `${setupLogEl.textContent || ""}\n${line}`
-      .split(/\r?\n/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .slice(-80);
-    setupLogEl.textContent = lines.join("\n");
-    if (onboardingLogPanel && typeof text === "string" && text.trim()) {
-      onboardingLogPanel.classList.add("is-expanded");
-      if (onboardingLogToggle) onboardingLogToggle.setAttribute("aria-expanded", "true");
-    }
+    appendSetupLogLine(text);
   });
 }
 
@@ -2513,45 +2955,58 @@ async function runSetupChecklist() {
   }
 
   // Kick off Python setup + backend start
-  setCheck(checkPythonEl, "spin");
+  setCheck(checkPythonEl, "spin", "Starting backend...");
   const startResult = await bridge.startBackend?.() ?? { ok: false };
-  setCheck(checkPythonEl, startResult.ok ? "ok" : "fail");
+  if (startResult?.detail) appendSetupLogLine(startResult.detail);
+  setCheck(
+    checkPythonEl,
+    startResult.ok ? "ok" : "fail",
+    startResult.ok ? "Runtime ready." : (startResult.detail || "Python setup or backend startup failed.")
+  );
 
-  if (startResult.ok) {
-    try {
-      closeWebSocketQuietly();
-    } catch {
-      // ignore
-    }
-    app.ws = null;
-    connectWebSocket();
-  }
-
-  // Wait for WebSocket (reconnect backoff can exceed 15s on a cold start)
-  setCheck(checkWsEl, "spin");
+  // Wait for WebSocket, then restart once if the first handshake stays stale.
   let wsOk = false;
-  for (let i = 0; i < 90; i++) {
-    if (app.ws && app.ws.readyState === WebSocket.OPEN) { wsOk = true; break; }
-    await new Promise(r => setTimeout(r, 500));
+  let wsDetail = "";
+  if (startResult.ok) {
+    setCheck(checkWsEl, "spin", "Connecting to CIARA...");
+    wsOk = await establishFreshWebSocketConnection(20000);
+    if (!wsOk) {
+      wsDetail = "Initial websocket handshake timed out. Restarting backend once...";
+      appendSetupLogLine(wsDetail);
+      const restartResult = await bridge.restartBackend?.() ?? { ok: false };
+      if (restartResult?.detail) appendSetupLogLine(restartResult.detail);
+      if (restartResult.ok) {
+        wsOk = await establishFreshWebSocketConnection(20000);
+      } else {
+        wsDetail = restartResult.detail || "Backend restart failed before websocket could reconnect.";
+      }
+    }
+  } else {
+    wsDetail = "Backend is unavailable, so the websocket could not be opened.";
   }
-  setCheck(checkWsEl, wsOk ? "ok" : "fail");
+  if (!wsOk && !wsDetail) {
+    wsDetail = "CIARA could not connect to ws://127.0.0.1:8000/ws yet. Open 'more' for startup details.";
+  }
+  setCheck(checkWsEl, wsOk ? "ok" : "fail", wsOk ? "Connected." : wsDetail);
 
   // Microphone permission check
-  setCheck(checkMicEl, "spin");
+  setCheck(checkMicEl, "spin", "Checking access...");
+  let micOk = false;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(t => t.stop());
-    setCheck(checkMicEl, "ok");
+    micOk = true;
+    setCheck(checkMicEl, "ok", "Ready.");
   } catch {
-    setCheck(checkMicEl, "fail");
+    setCheck(checkMicEl, "fail", "Microphone permission is blocked in system settings.");
   }
 
-  if (next2Btn) next2Btn.disabled = false;
+  if (next2Btn) next2Btn.disabled = !(startResult.ok && wsOk);
 }
 
 if (next2Btn) {
   next2Btn.addEventListener("click", () => {
-    showOnboardingStep(8);
+    showOnboardingStep(9);
   });
 }
 

@@ -18,6 +18,7 @@ import time
 import numpy as np
 import sys
 import os
+import uuid
 from functools import partial
 
 from dotenv import load_dotenv
@@ -58,6 +59,8 @@ from servers.browser_bridge_server import BRIDGE_HOST, BRIDGE_PORT, bridge_handl
 from browser import BrowserResolver, browser_bridge, browser_store, ActionRequest
 from browser.selector_ai import build_ranked_candidates, select_browser_candidate_with_flash
 from servers.local_augment import build_agent_user_message_with_vault
+from tools.registry import set_tool_run_context
+from reliability import with_timeout_retry
 
 # Agent version toggle (deprecated compatibility env; V2 is always used)
 AGENT_VERSION = os.environ.get("CIARA_AGENT_VERSION", "v2")
@@ -77,6 +80,109 @@ def _map_user_action_to_text(action: str) -> str:
     if normalized == "cancel_plan":
         return "cancel"
     return normalized
+
+
+def _is_screen_read_request(text: str) -> bool:
+    normalized = (text or "").strip().lower()
+    if not normalized:
+        return False
+    screen_phrases = (
+        "what's on my screen",
+        "whats on my screen",
+        "what is on my screen",
+        "what do you see",
+        "what can you see",
+        "describe my screen",
+        "describe what's on my screen",
+        "describe whats on my screen",
+        "read my screen",
+        "look at my screen",
+    )
+    return any(phrase in normalized for phrase in screen_phrases)
+
+
+def _is_cursor_demo_request(text: str) -> bool:
+    normalized = " ".join((text or "").strip().lower().split())
+    if not normalized:
+        return False
+    phrases = (
+        "open cursor",
+        "show cursor",
+        "open ciara cursor",
+        "show ciara cursor",
+        "bring up cursor",
+        "display cursor",
+    )
+    return normalized in phrases
+
+
+def _clean_screen_read_response(text: str) -> str:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return "I could not read the screen."
+
+    final_markers = [
+        "\nThe screen shows ",
+        "\nYour screen shows ",
+        "\nI can see ",
+        "\nCurrently, your screen ",
+    ]
+    lower = cleaned.lower()
+    marker_positions = [
+        lower.rfind(marker.lower())
+        for marker in final_markers
+        if lower.rfind(marker.lower()) >= 0
+    ]
+    if marker_positions:
+        cleaned = cleaned[max(marker_positions):].strip()
+
+    leaked_prefixes = (
+        "the user wants",
+        "i need to",
+        "1.  **analyze",
+        "analyze the image",
+    )
+    if cleaned.lower().startswith(leaked_prefixes):
+        if "\n\n" in cleaned:
+            cleaned = cleaned.split("\n\n", 1)[1].strip()
+        lines = [line for line in cleaned.splitlines() if line.strip()]
+        useful = []
+        capture = False
+        for line in lines:
+            lowered = line.strip().lower()
+            if lowered.startswith(("the screen shows", "your screen shows", "i can see", "currently")):
+                capture = True
+            if capture:
+                useful.append(line)
+        cleaned = "\n".join(useful).strip() or cleaned
+
+    max_len = 1800
+    if len(cleaned) <= max_len:
+        return cleaned
+    clipped = cleaned[:max_len]
+    sentence_end = max(clipped.rfind("."), clipped.rfind("!"), clipped.rfind("?"))
+    if sentence_end > 800:
+        return clipped[:sentence_end + 1].strip()
+    return clipped.rstrip() + "..."
+
+
+async def _send_json(websocket, payload: dict, *, timeout_s: float = 2.5, attempts: int = 2) -> None:
+    async def _op():
+        return await websocket.send(json.dumps(payload))
+
+    await with_timeout_retry(
+        "websocket.send",
+        _op,
+        timeout_s=timeout_s,
+        attempts=attempts,
+    )
+
+
+async def _read_screen_without_blocking_server(question: str) -> str:
+    """Run vision screen reading away from the websocket event loop."""
+    from tools.mac_tools import read_screen
+
+    return await asyncio.to_thread(lambda: asyncio.run(read_screen(question)))
 
 
 class VoiceAssistant:
@@ -143,25 +249,82 @@ class VoiceAssistant:
         # Active agent task for interrupt support
         self._active_task: asyncio.Task | None = None
         self._active_websocket = None
+        self._active_task_id: str | None = None
 
     async def run_agent_text(self, websocket, text: str):
         print(f"=> INPUT: {text}")
+        task_id = f"task-{uuid.uuid4().hex[:10]}"
+        self._active_task_id = task_id
+        self._active_task = asyncio.current_task()
+        await websocket.send(json.dumps({
+            "type": "task_event",
+            "phase": "start",
+            "taskId": task_id,
+            "text": text,
+        }))
 
         async def ws_callback(msg: dict):
             try:
-                await websocket.send(json.dumps(msg))
+                if self._active_task_id != task_id:
+                    print(f"[WS Callback] Dropping stale message for {task_id}")
+                    return
+                if isinstance(msg, dict):
+                    msg.setdefault("taskId", task_id)
+                await _send_json(websocket, msg)
             except Exception as e:
                 print(f"[WS Callback] Error sending: {e}")
 
-        context = await perception.snapshot(text)
+        set_tool_run_context(task_id, ws_callback)
 
-        # Vault RAG (TF-IDF over local vault files)
-        user_message = build_agent_user_message_with_vault(self.agent, text)
+        try:
+            if _is_cursor_demo_request(text):
+                await ws_callback({
+                    "type": "tool_event",
+                    "phase": "start",
+                    "actionId": f"{task_id}:demo-cursor",
+                    "tool": "show_cursor",
+                })
+                await ws_callback({
+                    "type": "automation_cursor",
+                    "payload": {
+                        "action": "move",
+                        "x": 0,
+                        "y": 0,
+                        "position": "center",
+                        "label": "CIARA",
+                        "autoHideMs": 5200,
+                    },
+                })
+                await ws_callback({
+                    "type": "tool_event",
+                    "phase": "result",
+                    "actionId": f"{task_id}:demo-cursor",
+                    "tool": "show_cursor",
+                    "ok": True,
+                    "durationMs": 0,
+                    "result": "Cursor preview shown.",
+                })
+                result = ("Cursor preview is open.", False)
+            else:
+                context = await perception.snapshot(text)
 
-        # Pass conversation-mode flag so the agent can tailor responses
-        self.agent._conversation_mode = self.conversation_mode
+                # Vault RAG (TF-IDF over local vault files)
+                user_message = build_agent_user_message_with_vault(self.agent, text)
 
-        result = await self.agent.run(user_message, context, ws_callback=ws_callback)
+                # Pass conversation-mode flag so the agent can tailor responses
+                self.agent._conversation_mode = self.conversation_mode
+
+                result = await self.agent.run(user_message, context, ws_callback=ws_callback)
+        finally:
+            if self._active_task_id == task_id:
+                await _send_json(websocket, {
+                    "type": "task_event",
+                    "phase": "result",
+                    "taskId": task_id,
+                })
+                self._active_task_id = None
+                self._active_task = None
+                set_tool_run_context("", None)
 
         if isinstance(result, tuple):
             response_text, awaiting_reply = result
@@ -172,15 +335,15 @@ class VoiceAssistant:
         if "[CONVERSATION_MODE_ON]" in (response_text or ""):
             self.conversation_mode = True
             print("[Backend] 🗣 Conversation mode ENABLED")
-            await websocket.send(json.dumps({
+            await _send_json(websocket, {
                 "type": "conversation_mode", "enabled": True
-            }))
+            })
         elif "[CONVERSATION_MODE_OFF]" in (response_text or ""):
             self.conversation_mode = False
             print("[Backend] 🔇 Conversation mode DISABLED")
-            await websocket.send(json.dumps({
+            await _send_json(websocket, {
                 "type": "conversation_mode", "enabled": False
-            }))
+            })
 
         # Stream TTS for the response
         clean_response = (response_text or "").replace("[CONVERSATION_MODE_ON]", "").replace("[CONVERSATION_MODE_OFF]", "").strip()
@@ -214,6 +377,47 @@ class VoiceAssistant:
 
     # ── TTS Streaming ──
 
+    async def start_agent_text_task(self, websocket, text: str, source: str = "text_input"):
+        """Run an agent request in the background so cancel_task can interrupt it."""
+        if self._active_task and not self._active_task.done():
+            await self.cancel_active_task(websocket)
+
+        async def runner():
+            try:
+                await asyncio.wait_for(
+                    self.run_agent_text(websocket, text),
+                    timeout=AGENT_TEXT_TIMEOUT_SECONDS,
+                )
+            except asyncio.CancelledError:
+                print(f"[Backend] {source} cancelled")
+                raise
+            except asyncio.TimeoutError:
+                print(f"[Backend] {source} timed out after {AGENT_TEXT_TIMEOUT_SECONDS}s")
+                self.state = "IDLE"
+                self.waiting_for_reply = False
+                self.audio_buffer = bytearray()
+                await websocket.send(json.dumps({
+                    "type": "response",
+                    "payload": {"text": "CIARA took too long to respond, so I stopped that task.", "app": ""}
+                }))
+                await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
+            except Exception as e:
+                print(f"[Backend] {source} error: {e}")
+                self.state = "IDLE"
+                self.waiting_for_reply = False
+                self.audio_buffer = bytearray()
+                await websocket.send(json.dumps({
+                    "type": "response",
+                    "payload": {"text": "CIARA hit an internal error while processing that request.", "app": ""}
+                }))
+                await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
+
+        self.state = "LOADING"
+        await websocket.send(json.dumps({
+            "type": "progress", "state": "state-loading"
+        }))
+        self._active_task = asyncio.create_task(runner())
+
     async def _stream_tts(self, websocket, text: str):
         """Stream TTS audio sentence-by-sentence to the renderer."""
         if not text or len(text.strip()) < 3:
@@ -242,6 +446,9 @@ class VoiceAssistant:
         ws = websocket or self._active_websocket
         print("[Backend] ⛔ Cancelling active task")
         runtime_state_store.cancel_request()
+        cancelled_task_id = self._active_task_id
+        self._active_task_id = None
+        set_tool_run_context("", None)
 
         if self._active_task and not self._active_task.done():
             self._active_task.cancel()
@@ -251,6 +458,12 @@ class VoiceAssistant:
         self.tts_playing = False
         if ws:
             try:
+                if cancelled_task_id:
+                    await ws.send(json.dumps({
+                        "type": "task_event",
+                        "phase": "cancelled",
+                        "taskId": cancelled_task_id,
+                    }))
                 await ws.send(json.dumps({"type": "tts_stop"}))
                 await ws.send(json.dumps({"type": "status", "state": "state-idle"}))
             except Exception:
@@ -557,10 +770,32 @@ async def main_handler(websocket):
                             "type": "progress", "state": "state-loading"
                         }))
                         try:
-                            await asyncio.wait_for(
-                                assistant.run_agent_text(websocket, text),
-                                timeout=AGENT_TEXT_TIMEOUT_SECONDS,
-                            )
+                            if _is_screen_read_request(text):
+                                await websocket.send(json.dumps({
+                                    "type": "doing",
+                                    "text": "Reading your screen",
+                                    "tool": "read_screen",
+                                    "variant": "",
+                                }))
+                                result = await asyncio.wait_for(
+                                    _read_screen_without_blocking_server(text),
+                                    timeout=60,
+                                )
+                                result = _clean_screen_read_response(result)
+                                assistant.state = "IDLE"
+                                await websocket.send(json.dumps({
+                                    "type": "response",
+                                    "payload": {
+                                        "modal": "text",
+                                        "message": result,
+                                        "display": "card",
+                                        "app": "",
+                                    },
+                                }))
+                                await websocket.send(json.dumps({"type": "status", "state": "state-idle"}))
+                                continue
+
+                            await assistant.start_agent_text_task(websocket, text, "text_input")
                         except asyncio.TimeoutError:
                             print(f"[Backend] text_input timed out after {AGENT_TEXT_TIMEOUT_SECONDS}s")
                             assistant.state = "IDLE"
@@ -589,10 +824,7 @@ async def main_handler(websocket):
                             "type": "progress", "state": "state-loading"
                         }))
                         try:
-                            await asyncio.wait_for(
-                                assistant.run_agent_text(websocket, mapped_text),
-                                timeout=AGENT_TEXT_TIMEOUT_SECONDS,
-                            )
+                            await assistant.start_agent_text_task(websocket, mapped_text, "user_action")
                         except asyncio.TimeoutError:
                             print(f"[Backend] user_action timed out after {AGENT_TEXT_TIMEOUT_SECONDS}s")
                             assistant.state = "IDLE"

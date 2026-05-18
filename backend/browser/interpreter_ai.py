@@ -8,10 +8,11 @@ import os
 from typing import Any, Dict, List, Tuple
 
 from providers.gemini import GeminiProvider
+from providers.openai_compatible import OpenAICompatibleProvider
 
 
 _FLASH_TIMEOUT_SECONDS = 14.0
-_provider_cache: Dict[Tuple[str, str], GeminiProvider] = {}
+_provider_cache: Dict[Tuple[str, str, str], object] = {}
 
 
 class BrowserInterpretationError(Exception):
@@ -24,10 +25,31 @@ class BrowserInterpretationError(Exception):
 
 
 def _get_gemini_provider(api_key: str, model_name: str) -> GeminiProvider:
-    cache_key = (api_key, model_name)
+    cache_key = ("gemini", api_key, model_name)
     provider = _provider_cache.get(cache_key)
     if provider is None:
         provider = GeminiProvider(api_key=api_key, model=model_name)
+        _provider_cache[cache_key] = provider
+    return provider
+
+
+def _get_local_provider(model_name: str):
+    mode = (os.environ.get("CIARA_LLM_PROVIDER") or "").strip().lower()
+    base_url = (
+        os.environ.get("CIARA_LOCAL_BASE_URL")
+        or ("http://127.0.0.1:11434/v1" if mode in {"ollama", "local"} else "")
+    ).rstrip("/")
+    cache_key = (mode or "local", base_url, model_name)
+    provider = _provider_cache.get(cache_key)
+    if provider is None:
+        provider = OpenAICompatibleProvider(
+            base_url=base_url,
+            api_key=os.environ.get("CIARA_LOCAL_API_KEY", "ciara-local"),
+            model=model_name,
+            label="ollama" if mode in {"ollama", "local"} else "openai-compatible endpoint",
+            supports_vision=False,
+            supports_tools=False,
+        )
         _provider_cache[cache_key] = provider
     return provider
 
@@ -89,6 +111,26 @@ def _extract_json(text: str) -> Dict[str, Any]:
 
 
 async def _generate_with_flash(*, system_prompt: str, user_payload: Dict[str, Any]) -> Dict[str, Any]:
+    provider_mode = (os.environ.get("CIARA_LLM_PROVIDER") or "gemini").strip().lower()
+    if provider_mode != "gemini":
+        model_name = (
+            os.environ.get("CIARA_LOCAL_FAST_MODEL")
+            or os.environ.get("CIARA_LOCAL_MODEL")
+            or os.environ.get("GEMINI_FAST_MODEL", "")
+        ).strip()
+        if not model_name:
+            raise BrowserInterpretationError(
+                "Local browser interpreter unavailable: no local model is configured.",
+                error_code="flash_unavailable",
+            )
+        provider = _get_local_provider(model_name)
+        if not await provider.is_available():
+            raise BrowserInterpretationError(
+                f"Local browser interpreter unavailable: provider '{model_name}' is not available.",
+                error_code="flash_unavailable",
+            )
+        return await _generate_json_with_provider(provider, model_name, system_prompt, user_payload)
+
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     model_name = os.environ.get("GEMINI_FAST_MODEL", "gemma-4-26b-a4b-it").strip() or "gemma-4-26b-a4b-it"
 
@@ -105,6 +147,10 @@ async def _generate_with_flash(*, system_prompt: str, user_payload: Dict[str, An
             error_code="flash_unavailable",
         )
 
+    return await _generate_json_with_provider(provider, model_name, system_prompt, user_payload)
+
+
+async def _generate_json_with_provider(provider, model_name: str, system_prompt: str, user_payload: Dict[str, Any]) -> Dict[str, Any]:
     try:
         response = await asyncio.wait_for(
             provider.generate(
@@ -117,13 +163,13 @@ async def _generate_with_flash(*, system_prompt: str, user_payload: Dict[str, An
         )
     except asyncio.TimeoutError as exc:
         raise BrowserInterpretationError(
-            f"Flash browser interpreter timed out after {_FLASH_TIMEOUT_SECONDS:.1f}s.",
+            f"Browser interpreter timed out after {_FLASH_TIMEOUT_SECONDS:.1f}s.",
             error_code="flash_timeout",
         ) from exc
 
     if getattr(response, "error", ""):
         raise BrowserInterpretationError(
-            f"Flash browser interpreter returned an error: {response.error}",
+            f"Browser interpreter returned an error: {response.error}",
             error_code="flash_error",
         )
     payload = _extract_json(getattr(response, "text", "") or "")

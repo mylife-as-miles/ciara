@@ -14,6 +14,7 @@ from browser.models import ActionRequest
 from browser.selector_ai import select_browser_candidate_with_flash
 from browser.store import browser_store
 from browser.verifier import verify_action_result
+from reliability import with_timeout_retry
 from runtime_state import runtime_state_store
 from tools.contracts import dumps as contract_dumps
 from tools.contracts import error_envelope
@@ -760,7 +761,18 @@ async def _queue_browser_action(action: str, ref_id: str, session_id: str = "", 
 
     # Wait for the action result and fresh snapshot
     action_timeout_s = timeout
-    action_result = await browser_bridge.wait_for_result(result.action_id, timeout=action_timeout_s)
+    async def _wait_for_action_result():
+        return await browser_bridge.wait_for_result(result.action_id, timeout=action_timeout_s)
+
+    try:
+        action_result = await with_timeout_retry(
+            "browser.wait_for_result",
+            _wait_for_action_result,
+            timeout_s=action_timeout_s + 0.5,
+            attempts=2,
+        )
+    except asyncio.TimeoutError:
+        action_result = None
         
     if not action_result:
         # Timeout waiting for action execution
@@ -792,6 +804,13 @@ async def _queue_browser_action(action: str, ref_id: str, session_id: str = "", 
         post_gen = action_result.post_generation
 
     report = verify_action_result(action_result)
+    dom_change = browser_bridge.latest_dom_change(action_result.action_id)
+    dom_change_types = list(getattr(dom_change, "change_types", []) or [])
+    if dom_change_types:
+        if "dom_change" not in report.checks_passed:
+            report.checks_passed.append("dom_change")
+        report.success = True
+        report.confidence = max(report.confidence, 0.9)
     payload = {
         "ok": action_result.ok,
         "action": action_result.action,
@@ -805,6 +824,7 @@ async def _queue_browser_action(action: str, ref_id: str, session_id: str = "", 
             "confidence": report.confidence,
             "checks_passed": report.checks_passed,
             "needs_replan": report.needs_replan,
+            "dom_change_types": dom_change_types,
         }
     }
     return json.dumps(payload, ensure_ascii=False)
