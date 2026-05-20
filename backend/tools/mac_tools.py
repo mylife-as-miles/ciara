@@ -1366,7 +1366,7 @@ async def run_shell(command: str) -> str:
         return f"ERROR: {str(e)[:200]}"
 
 
-# ── 16. read_screen (Gemini Vision OCR) ──
+# ── 16. read_screen (Gemma 4 vision OCR) ──
 
 def _draw_grid_overlay(filepath: str, step: int = 100) -> None:
     """Draw a subtle coordinate grid on a screenshot to help Vision models
@@ -1427,7 +1427,7 @@ async def _fast_visual_locate(
     description: str,
     hint: str = "",
 ) -> Optional[tuple]:
-    """Find a UI element visually using Gemini Flash (~3-5 s).
+    """Find a UI element visually using Gemma 4 fast tier (~3-5 s).
 
     Captures a screenshot, sends it to the *Flash* model with a focused
     prompt asking only for the element's (x, y) centre coordinates.
@@ -1747,7 +1747,7 @@ async def read_screen(question: str = "") -> str:
                     f" correspond 1:1 to click coordinates on that display."
                 )
 
-        # Use Gemini Vision to analyze
+        # Use Gemma 4 vision to analyze
         # IMPORTANT: Use the POWERFUL model for screen reading â€” coordinate
         # precision is critical for click accuracy.  Flash models are too
         # imprecise for small UI targets like buttons, icons, and links.
@@ -1916,7 +1916,7 @@ async def read_screen(question: str = "") -> str:
                 f" correspond 1:1 to click coordinates on that display."
             )
         
-        # Use Gemini Vision to analyze
+        # Use Gemma 4 vision to analyze
         # IMPORTANT: Use the POWERFUL model for screen reading — coordinate
         # precision is critical for click accuracy.  Flash models are too
         # imprecise for small UI targets like buttons, icons, and links.
@@ -2921,7 +2921,7 @@ async def click_ui(description: str, app_name: str = "", click_type: str = "sing
         match = _best_match(elements, description) if elements else None
 
         if not match:
-            # 3) OCR/screenshot fallback — find the element on screen using Gemini Flash
+            # 3) OCR/screenshot fallback — find the element on screen using Gemma 4 fast tier
             print(f"[click_ui] Accessibility miss for '{description}', trying visual fallback…")
             coords = await _fast_visual_locate(
                 description,
@@ -3017,7 +3017,7 @@ async def type_in_field(field_description: str, text: str, app_name: str = "", c
         if match:
             cx, cy = match["cx"], match["cy"]
         else:
-            # 3) OCR/screenshot fallback — find the field using Gemini Flash
+            # 3) OCR/screenshot fallback — find the field using Gemma 4 fast tier
             print(f"[type_in_field] Accessibility miss for '{field_description}', trying visual fallback…")
             coords = await _fast_visual_locate(
                 f"'{field_description}' text field or input area",

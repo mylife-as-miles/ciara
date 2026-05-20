@@ -1013,7 +1013,7 @@ async def main_handler(websocket):
                         await websocket.send(json.dumps({
                             "type": "browser_flash_result",
                             "ok": False,
-                            "message": f"Timed out waiting for Gemini Flash browser action '{query}'.",
+                            "message": f"Timed out waiting for Gemma 4 fast tier browser action '{query}'.",
                             "action_id": queued.action_id,
                             "selection": selection,
                         }))

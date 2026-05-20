@@ -19,8 +19,8 @@ from providers.openai_compatible import OpenAICompatibleProvider
 # ═══════════════════════════════════════════════════════════════
 
 class Tier(Enum):
-    FAST = 1       # Gemini 3 Flash — cheap router + simple executor
-    POWERFUL = 2   # Gemini 3.1 Pro — complex reasoning, multimodal
+    FAST = 1       # Gemma 4 fast tier: routing and simple execution
+    POWERFUL = 2   # Gemma 4 powerful tier: complex reasoning and multimodal work
 
 
 @dataclass
@@ -36,12 +36,12 @@ class RouteDecision:
 #  Model Config
 # ═══════════════════════════════════════════════════════════════
 
-# Gemma 4 via Google AI — exact IDs may evolve; override with GEMINI_*_MODEL env vars.
+# Gemma 4 via Google GenAI. Exact IDs may evolve; override with GEMINI_*_MODEL env vars.
 FAST_MODEL = os.environ.get("GEMINI_FAST_MODEL", "gemma-4-26b-a4b-it").strip() or "gemma-4-26b-a4b-it"
 POWERFUL_MODEL = os.environ.get("GEMINI_POWERFUL_MODEL", "gemma-4-31b-it").strip() or "gemma-4-31b-it"
 ROUTING_MODEL = os.environ.get("GEMINI_ROUTING_MODEL", FAST_MODEL).strip() or FAST_MODEL
 
-# The routing prompt that Flash uses to classify requests
+# The routing prompt that the fast Gemma 4 tier uses to classify requests.
 ROUTING_PROMPT = """You are a routing classifier for a desktop AI assistant called CIARA.
 
 Your job: decide which AI model should handle this user request.
@@ -52,7 +52,7 @@ interpret the intent from desktop context. Do NOT route garbled requests to FAST
 
 ## Available Models
 - **FAST**: Only for the most trivial, single-step, zero-reasoning OS-level commands where there is no ambiguity and nothing can go wrong. No web browsing, no screen reading, no writing, no multi-step.
-- **POWERFUL**: Everything else. Gemini Pro. Handles all real tasks with full intelligence.
+- **POWERFUL**: Everything else. Gemma 4 powerful tier. Handles all real tasks with full intelligence.
 
 ## FAST is ONLY appropriate for these exact types of requests:
 - Open a named app ("open Spotify", "launch Safari")

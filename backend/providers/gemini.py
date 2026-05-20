@@ -1,5 +1,5 @@
 """
-CIARA — Gemini Provider (Cloud)
+CIARA - Google GenAI Provider (Gemma 4 cloud/API mode)
 =====================================
 Google Gemini — cloud, multimodal, highest quality.
 """

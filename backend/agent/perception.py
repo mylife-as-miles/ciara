@@ -3,7 +3,7 @@ CIARA — 3-Layer Perception Engine
 =====================================
 L1: AppleScript  → active app, window title, browser URL (always, ~50ms)
 L2: Browser DOM  → page content, selected text (when browser is active)
-L3: Gemini Vision → screenshot for visual understanding (on demand)
+L3: Gemma 4 vision → screenshot for visual understanding (on demand)
 """
 
 import asyncio

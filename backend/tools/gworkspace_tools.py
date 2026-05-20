@@ -529,9 +529,9 @@ def _extract_visual_coordinates(screen_result: str) -> tuple[int, int] | None:
 # ═══════════════════════════════════════════════════════════════
 
 async def _vision_locate_and_click(description: str, hint: str = "") -> bool:
-    """Use Gemini Vision to find a UI element on screen and click it.
+    """Use Gemma 4 vision to find a UI element on screen and click it.
 
-    Uses _fast_visual_locate (screenshot → Gemini Flash → coordinates)
+    Uses _fast_visual_locate (screenshot → Gemma 4 fast tier → coordinates)
     which is immune to DOM class-name changes in Google Docs.
 
     Returns True if element was found and clicked.
@@ -633,7 +633,7 @@ async def _vision_gdocs_read_content() -> str:
 
 
 async def _gdocs_focus_editor_with_vision() -> bool:
-    """Use Gemini Vision to find and click the Google Docs editor body.
+    """Use Gemma 4 vision to find and click the Google Docs editor body.
 
     This is the most reliable way to place the cursor in the editor
     because it works regardless of DOM class-name changes.
@@ -801,7 +801,7 @@ async def gdocs_read(doc_url_or_id: str) -> str:
 
     # Fallback: DOM bridge → clipboard → vision OCR cascade
     # _gdocs_read_body focuses the editor before clipboard copy and falls
-    # back to Gemini Vision OCR for canvas-based docs.
+    # back to Gemma 4 vision OCR for canvas-based docs.
     text = await _gdocs_read_body()
 
     if text and len(_normalize_doc_text(text)) >= 5:

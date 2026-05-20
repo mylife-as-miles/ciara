@@ -555,7 +555,7 @@ async def browser_read_text(max_chars: int = 6000, query: str = "", session_id: 
 
 @registry.register(
     name="browser_find",
-    description="Find ranked browser element candidates for a user intent. Returns ranked candidates and a best-candidate recommendation chosen by Gemini 3 Flash when available. Prefer browser_read_page to see page content first, and browser_click_match for quick clicks.",
+    description="Find ranked browser element candidates for a user intent. Returns ranked candidates and a best-candidate recommendation chosen by Gemma 4 fast tier when available. Prefer browser_read_page to see page content first, and browser_click_match for quick clicks.",
     parameters={
         "type": "object",
         "properties": {

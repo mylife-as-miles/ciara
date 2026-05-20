@@ -4,7 +4,7 @@ CIARA — General Intelligence Benchmark
 Tests cognitive reasoning: logic, ambiguity handling, math,
 creativity, world knowledge, and adversarial robustness.
 
-Uses LLM-as-Judge (Gemini Flash) to score outputs 0-10.
+Uses LLM-as-Judge (Gemma 4 fast tier) to score outputs 0-10.
 
 Run:
     python benchmarks/benchmark_intelligence.py
@@ -47,7 +47,7 @@ class BenchmarkDone(BaseException):
 # ═══════════════════════════════════════════════════════════════
 
 async def llm_judge(output: str, rubric: str, expected: str, router) -> dict:
-    """Use Gemini Flash to evaluate output quality on a 0-10 scale."""
+    """Use Gemma 4 fast tier to evaluate output quality on a 0-10 scale."""
     judge_prompt = f"""You are a strict, expert evaluator for an AI agent benchmark.
 Score the agent's response on a 0-10 scale based on the rubric below.
 

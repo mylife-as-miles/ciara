@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-CIARA is a **voice-activated AI assistant** that runs as a macOS overlay (Electron) with a Python backend powered by Google's Gemini LLM. The LLM controls the user's Mac (open apps, click UI, type text) and can automate the browser via the Chrome extension bridge.
+CIARA is a **voice-activated desktop agent** that runs as an Electron overlay with a Python backend powered by Gemma 4 model routing. It can control the user's desktop (open apps, click UI, type text) and automate the browser via the Chrome extension bridge.
 
 ### Architecture Diagram
 
@@ -340,4 +340,3 @@ async def my_new_tool(param1: str = "") -> str:
 ## 13. Packaging
 
 Distribution builds use Electron (`electron-builder`). There is no Docker/GCP backend image maintained in this repository.
-

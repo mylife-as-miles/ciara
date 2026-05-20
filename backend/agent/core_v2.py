@@ -98,7 +98,7 @@ WEB_FLOW_TOOLS = {
 }
 
 # Simplified system prompt for V2 (planning is done separately)
-SYSTEM_PROMPT_V2 = """You are CIARA, a macOS desktop assistant.
+SYSTEM_PROMPT_V2 = """You are CIARA, a cross-platform desktop assistant.
 
 ## Personality & Tone
 - Warm, helpful, and efficient — like a capable friend, not a corporate bot.
@@ -431,7 +431,7 @@ class CiaraAgentV2:
             profile_hint = f"The user's name is {user_name}. Use it naturally (not every time).\n"
 
         system = (
-            "You are CIARA, a friendly macOS desktop assistant. "
+            "You are CIARA, a friendly cross-platform desktop assistant. "
             "Keep responses short (1-2 sentences max), natural, and warm. "
             "Sound like a helpful friend, not a corporate bot. "
             "You're voice-first — write responses that sound natural when spoken aloud. "

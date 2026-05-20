@@ -5,7 +5,7 @@ Tests whether the agent produces elite-level responses
 comparable to Claude/GPT-4 — not just correct, but
 exceptionally well-crafted.
 
-Uses 6-dimension LLM-as-Judge scoring via Gemini Flash.
+Uses 6-dimension LLM-as-Judge scoring via Gemma 4 fast tier.
 
 Run:
     python benchmarks/benchmark_quality.py

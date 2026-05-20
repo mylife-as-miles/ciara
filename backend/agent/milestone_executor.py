@@ -97,7 +97,7 @@ class MilestoneAction:
 # ═══════════════════════════════════════════════════════════════
 
 MILESTONE_EXECUTOR_SYSTEM = """\
-You are the execution engine for CIARA, a macOS desktop AI assistant.
+You are the execution engine for CIARA, a cross-platform desktop AI assistant.
 You are working on ONE milestone at a time. Your job: decide which tool to call
 NEXT to achieve the milestone's goal, based on what you observe in the
 environment and the results of previous actions.

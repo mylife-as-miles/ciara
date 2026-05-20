@@ -26,7 +26,7 @@ def _norm_text(text: str) -> str:
 #  Milestone Planning Prompt (V3)
 # ═══════════════════════════════════════════════════════════════
 
-MILESTONE_PLANNING_SYSTEM = """You are the milestone planner for CIARA, a macOS desktop AI assistant.
+MILESTONE_PLANNING_SYSTEM = """You are the milestone planner for CIARA, a cross-platform desktop AI assistant.
 Your job: convert user requests into MILESTONE plans — high-level goal checkpoints.
 Output ONLY valid JSON — no explanations, no markdown.
 

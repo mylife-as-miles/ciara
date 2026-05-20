@@ -154,7 +154,7 @@ function Pricing() {
           <p>CIARA is completely free to use. You plug in your own API keys for LLM and TTS providers, so you only pay your providers directly if you decide to use them.</p>
           <div className="pricing-actions">
             <a className="download-primary" href={windowsDownload} download><span className="windows-logo" aria-hidden="true" />Download for Windows</a>
-            <a className="docs-button" href="https://github.com" target="_blank" rel="noreferrer"><span className="docs-icon" aria-hidden="true" />Read setup docs</a>
+            <a className="docs-button" href="https://github.com/mylife-as-miles/ciara" target="_blank" rel="noreferrer"><span className="docs-icon" aria-hidden="true" />Read setup docs</a>
           </div>
           <p className="pricing-note">No lock-in. No platform tax. Your machine, your keys, <strong>your rules.</strong></p>
         </div>
@@ -188,7 +188,7 @@ function Footer({ onLegal }) {
         <p>Voice-first desktop agent for people who want their computer to actually do the work.</p>
         <div className="social-row" aria-label="Social links">
           <a href="mailto:hello@ciara.local" aria-label="Email CIARA" />
-          <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub" />
+          <a href="https://github.com/mylife-as-miles/ciara" target="_blank" rel="noreferrer" aria-label="GitHub" />
           <a href="#features" aria-label="Documentation" />
           <a href="#top" aria-label="Back to top" />
         </div>
@@ -196,7 +196,7 @@ function Footer({ onLegal }) {
       <nav className="footer-nav" aria-label="Footer navigation">
         <div><h3>Product</h3><a href="#features">Features</a><a href="#use-cases">Use Cases</a><a href="#pricing">Pricing</a><a href="#pricing">Roadmap</a></div>
         <div><h3>Download</h3><a href={windowsDownload} download>Windows</a><span>Mac (Coming Soon)</span><a href="#features">Setup Docs</a><a href="#top">Changelog</a></div>
-        <div><h3>Resources</h3><a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a><a href="#features">Documentation</a><a href="#pricing">API Setup</a><a href="mailto:hello@ciara.local">Community</a></div>
+        <div><h3>Resources</h3><a href="https://github.com/mylife-as-miles/ciara" target="_blank" rel="noreferrer">GitHub</a><a href="#features">Documentation</a><a href="#pricing">API Setup</a><a href="mailto:hello@ciara.local">Community</a></div>
         <div><h3>Legal</h3><button type="button" onClick={() => onLegal("privacy")}>Privacy</button><button type="button" onClick={() => onLegal("terms")}>Terms</button><a href="#top">License</a></div>
       </nav>
       <img className="footer-core" src="/assets/footer-core.png" alt="CIARA local automation core" />

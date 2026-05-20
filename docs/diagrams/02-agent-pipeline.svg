@@ -107,7 +107,7 @@
   <g filter="url(#shadowSm)">
     <rect x="580" y="195" width="200" height="56" rx="10" fill="white" stroke="rgba(0,122,255,0.12)" stroke-width="1"/>
     <text x="680" y="216" text-anchor="middle" font-size="11" font-weight="600" fill="#1d1d1f">perception.py</text>
-    <text x="680" y="232" text-anchor="middle" font-size="9" fill="#6e6e73">screenshot → Gemini Flash →</text>
+    <text x="680" y="232" text-anchor="middle" font-size="9" fill="#6e6e73">screenshot → Gemma 4 fast tier →</text>
     <text x="680" y="244" text-anchor="middle" font-size="9" fill="#6e6e73">structured scene understanding</text>
   </g>
   <line x1="530" y1="223" x2="580" y2="223" stroke="#007aff" stroke-width="1.2" stroke-dasharray="4 3"/>
@@ -207,7 +207,7 @@
   <g filter="url(#shadowSm)">
     <rect x="90" y="575" width="120" height="56" rx="10" fill="white" stroke="rgba(175,82,222,0.20)" stroke-width="1.5"/>
     <text x="150" y="600" text-anchor="middle" font-size="18">✦</text>
-    <text x="150" y="618" text-anchor="middle" font-size="10" font-weight="600" fill="#af52de">Gemini Pro</text>
+    <text x="150" y="618" text-anchor="middle" font-size="10" font-weight="600" fill="#af52de">Gemma 4 powerful tier</text>
     <text x="150" y="630" text-anchor="middle" font-size="8" fill="#6e6e73">tool selection + reasoning</text>
   </g>
   <line x1="240" y1="605" x2="210" y2="605" stroke="#af52de" stroke-width="1.5" marker-end="url(#arrowPurple)"/>
@@ -258,7 +258,7 @@
   <!-- Gemini provider label -->
   <g transform="translate(90, 480)">
     <rect width="120" height="22" rx="6" fill="#af52de" opacity="0.06"/>
-    <text x="60" y="15" text-anchor="middle" font-size="9" fill="#af52de" font-weight="500">Gemini Flash (fast path)</text>
+    <text x="60" y="15" text-anchor="middle" font-size="9" fill="#af52de" font-weight="500">Gemma 4 fast tier (fast path)</text>
   </g>
 
   <!-- Legend -->

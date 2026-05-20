@@ -16,7 +16,7 @@ Architecture
 Cost profile
 ------------
   peek/refresh : Zero tokens, zero API quota.  Pure local AppleScript.
-  deep_look    : ~500 tokens via Gemini Vision.  Budget-capped per task (default 5).
+  deep_look    : ~500 tokens via Gemma 4 vision.  Budget-capped per task (default 5).
 
 Integration points
 ------------------
@@ -193,7 +193,7 @@ class ScreenGlance:
         return result
 
     async def deep_look(self, question: str = "") -> GlanceResult:
-        """Full screenshot + Gemini Vision analysis.
+        """Full screenshot + Gemma 4 vision analysis.
 
         Cost: ~2-4 seconds, ~500 tokens.
         Budget: Capped at {deep_look_budget} per task.

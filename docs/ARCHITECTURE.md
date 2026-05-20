@@ -171,7 +171,7 @@ Before the pipeline starts, `_pick_ack()` picks a brief phrase ("On it", "Sure",
 ### System prompt personality section
 
 `SYSTEM_PROMPT_V2` includes a `## Personality & Tone` block that instructs the LLM to:
-- be warm, direct, and concise (macOS assistant register)
+- be warm, direct, and concise (desktop assistant register)
 - skip preamble for action tasks; lead with the action
 - use first-person natural language for conversational turns
 - avoid corporate filler phrases
@@ -336,7 +336,7 @@ No visual indicator beyond the standard blue listening glow (existing `variant-l
 
 ### Providers
 
-`backend/providers/` — abstraction layer over LLM providers (OpenAI, Google Gemini, Anthropic). The milestone executor and fast path call into provider adapters; no provider-specific code leaks into agent logic.
+`backend/providers/` — abstraction layer over LLM providers (OpenAI, Gemma 4 through Google GenAI, Anthropic). The milestone executor and fast path call into provider adapters; no provider-specific code leaks into agent logic.
 
 ---
 

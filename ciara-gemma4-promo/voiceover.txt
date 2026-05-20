@@ -1,0 +1,17 @@
+At 9:40 p.m., someone is staring at a task they know they can finish. The problem is not motivation. The problem is the computer.
+
+Tabs, forms, file pickers, settings, copy paste, tiny steps. For many people, everyday computer work becomes digital exclusion.
+
+CIARA is a local-first desktop agent powered by Gemma 4.
+
+Gemma 4 helps CIARA understand intent, read browser and screen context, create milestone plans, choose tools, and verify progress.
+
+The workflow is Sense, Plan, Act, Verify.
+
+CIARA senses the desktop. Gemma 4 plans the workflow. CIARA acts through browser DOM tools, mouse, keyboard, files, and visual targeting. Then it verifies what changed.
+
+CIARA supports Gemma 4 through API mode, Ollama local mode, and llama.cpp compatible runtimes. Cloud when quality matters. Local when privacy, cost, or connectivity matter.
+
+This is digital equity through real computer control: everyday tasks driven by intent instead of technical skill.
+
+CIARA: Local-First Gemma 4 Desktop Agent for Everyday Computer Tasks.

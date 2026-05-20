@@ -24,7 +24,7 @@ This tree is **local-first**: the Python backend is `backend/servers/local_serve
 11. [The SPAV Agent Loop Explained](#11-the-spav-agent-loop-explained)
 12. [Google APIs & Local Data](#12-google-apis--local-data)
 13. [How the Software Was Built](#13-how-the-software-was-built)
-14. [Building a DMG for Distribution](#14-building-a-dmg-for-distribution)
+14. [Building Release Artifacts](#14-building-a-dmg-for-distribution)
 15. [Code Signing & Notarization](#15-code-signing--notarization)
 16. [Shipping Release Artifacts](#16-shipping-release-artifacts)
 17. [Running Tests](#17-running-tests)
@@ -37,72 +37,62 @@ This tree is **local-first**: the Python backend is `backend/servers/local_serve
 
 ## 1. What is CIARA?
 
-CIARA is an **AI desktop assistant for macOS**. It lives as a small floating glass pill at the top-centre of your screen and responds to your voice or typed commands. You speak to it naturally — *"open my emails"*, *"search for the best AirPods deal"*, *"write a reply to my last message"* — and it does the work on your Mac.
+CIARA is a **local-first AI desktop agent for Windows and macOS**. It lives as a small floating glass pill and responds to voice or typed commands. You speak to it naturally - "open my emails", "search for the best AirPods deal", "write a reply to my last message" - and it does the work on your desktop.
 
 ### What can it do?
 
-- **Open and control apps** — launch, quit, switch between any Mac app
-- **Control your Mac** — adjust volume, brightness, take screenshots, lock screen
-- **Browse the web** — search, read pages, fill forms, extract information (needs Chrome extension)
-- **Write content** — draft emails, messages, documents, summaries in any app
-- **Answer questions** — with full reasoning, using your current screen as context
-- **Multi-step tasks** — *"find the cheapest flight to Tokyo and open the booking page"*
-- **Remember things** — the vault stores notes, preferences, and facts across sessions
+- **Open and control apps** - launch, quit, and switch between desktop apps
+- **Control your desktop** - adjust volume, brightness, take screenshots, lock screen
+- **Browse the web** - search, read pages, fill forms, extract information (needs Chrome extension)
+- **Write content** - draft emails, messages, documents, summaries in any app
+- **Answer questions** - with full reasoning, using your current screen as context
+- **Multi-step tasks** - "find the cheapest flight to Tokyo and open the booking page"
+- **Remember things** - the vault stores notes, preferences, and facts across sessions
 
 ### How does it hear me?
 
-CIARA listens for the wake word **"Hey CIARA"** at all times using low-power on-device processing (Picovoice). When it hears you, the pill expands and shows your speech being transcribed in real-time. Alternatively, press a keyboard shortcut at any time.
+CIARA listens for the wake word **"Hey CIARA"** using low-power on-device processing when Picovoice is configured. You can also press the keyboard shortcut or use the command panel.
 
 ---
 
 ## 2. Installing CIARA
 
-### Step 1 — Download
-You will receive a link to a file named `CIARA-x.x.x-universal.dmg`. Download it and double-click the `.dmg` file to open it.
+### Step 1 - Download
+Download the release for your platform. Windows users receive an installer such as `CIARA-Setup-x.x.x.exe`; macOS users receive a disk image such as `CIARA-x.x.x-universal.dmg`.
 
-### Step 2 — Install to Applications
-A window opens showing the CIARA icon and an **Applications** folder shortcut. **Drag the CIARA icon into the Applications folder.** Close the window and eject the disk image (drag to Trash or right-click → Eject).
+### Step 2 - Install
+On Windows, run the installer and follow the prompts. On macOS, open the `.dmg` and drag CIARA into Applications.
 
-### Step 3 — Open CIARA
-Open your **Applications** folder and double-click **CIARA**.
+### Step 3 - Open CIARA
+Launch CIARA from the Start menu, desktop shortcut, or Applications folder.
 
-> ⚠️ **Gatekeeper warning (first time only):** macOS may say it *"cannot be opened because the developer cannot be verified."*
->
-> **Fix:** Right-click the CIARA icon → **Open** → **Open** in the dialog. You only need to do this once.
+> macOS first-run note: if Gatekeeper says the app cannot be verified, right-click CIARA, choose **Open**, then confirm. You only need to do this once.
 
-### Step 4 — First-Launch Onboarding (~60 seconds)
+### Step 4 - First-Launch Onboarding (~60 seconds)
 
-The first time CIARA opens it shows a 3-step setup wizard:
+The first time CIARA opens it shows a setup wizard:
 
-**Step 1 — Enter your API key**
-- You need a free **Gemini API key** from Google AI Studio
-- Click the blue link in the wizard to open [aistudio.google.com](https://aistudio.google.com/app/apikey) — no credit card, free tier is plenty
-- Paste the key into the first field and click **Save & Continue**
-- Optionally add a **Picovoice access key** (free at [console.picovoice.ai](https://console.picovoice.ai)) to enable the "Hey CIARA" wake word
+**Step 1 - Choose a model provider**
+- Use Gemma 4 through Google GenAI for fast onboarding, or configure Ollama / llama.cpp-compatible local inference for private local use.
+- Add a Google AI Studio API key if using API mode.
+- Optionally add a Picovoice access key to enable the "Hey CIARA" wake word.
 
-> ⚠️ **Without a Picovoice key the wake word is disabled.** Use `⌘⇧Space` instead — it works identically and requires no extra account.
-
-**Step 2 — Automatic setup (~60 seconds first time)**
-CIARA installs its Python environment automatically. You'll see three items go green:
-- ✅ Python environment (installs dependencies, ~60s the first time)
-- ✅ WebSocket connection
-- ✅ Microphone access
+**Step 2 - Automatic setup (~60 seconds first time)**
+CIARA installs or checks its Python environment. You'll see three items go green:
+- Python environment
+- WebSocket connection
+- Microphone access
 
 Click **Continue** once all three are green.
 
-**Step 3 — Shortcuts & Chrome Extension**
+**Step 3 - Shortcuts & Chrome Extension**
 Shows keyboard shortcuts and buttons to install the Chrome browser extension.
 
-### Step 5 — Grant Accessibility Permission
+### Step 5 - Grant Automation Permission
 
-For CIARA to control your Mac (clicking buttons, typing in apps, reading your screen), it needs Accessibility access:
+For CIARA to control your desktop (clicking buttons, typing in apps, reading your screen), it needs the relevant OS permissions. On macOS, grant Accessibility permission in **System Settings -> Privacy & Security -> Accessibility**. On Windows, run CIARA in the user session you want it to control.
 
-1. Open **System Settings** → **Privacy & Security** → **Accessibility**
-2. Find **CIARA** in the list
-3. Toggle it **ON**
-4. Enter your Mac password if prompted
-
-> Without this, CIARA can still answer questions and do web research, but cannot click or type in other apps.
+> Without these permissions, CIARA can still answer questions and do web research, but cannot reliably click or type in other apps.
 
 ---
 
@@ -261,7 +251,7 @@ Simply open CIARA again. It reconnects to any existing session and resumes conve
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/<your-org>/CIARA.git
+git clone https://github.com/mylife-as-miles/ciara.git
 cd CIARA
 
 # 2. Install Node dependencies
@@ -336,7 +326,7 @@ cp backend/.env.example backend/.env
 
 | Variable | Description | Where to get it |
 |----------|-------------|-----------------|
-| `GEMINI_API_KEY` | Google Gemini API key — the AI brain | [aistudio.google.com](https://aistudio.google.com) |
+| `GEMINI_API_KEY` | Gemma 4 through Google GenAI API key — the AI brain | [aistudio.google.com](https://aistudio.google.com) |
 
 ### Recommended
 
@@ -406,7 +396,7 @@ CIARA/
 │   │   ├── verifier.py          # Post-action verification engine
 │   │   ├── world_state.py       # Typed desktop context + intent classification
 │   │   ├── memory.py            # Local memory (conversation, vault, profile, tasks)
-│   │   ├── rag.py               # Vault formatting helpers; optional Gemini embeddings
+│   │   ├── rag.py               # Vault formatting helpers; optional provider embeddings
 │   │   ├── glance.py            # Parallel screen perception
 │   │   └── constants.py         # Shared tool classification sets
 │   │
@@ -418,12 +408,12 @@ CIARA/
 │   │   └── selector_ai.py       # AI-powered DOM element selection
 │   │
 │   ├── providers/
-│   │   ├── gemini.py            # Google Gemini API client (google-genai SDK)
+│   │   ├── gemini.py            # Gemma 4 through Google GenAI API client (google-genai SDK)
 │   │   ├── router.py            # 4-tier model router (FAST / POWERFUL / ROUTING / FALLBACK)
 │   │   └── base.py              # LLMProvider abstract interface
 │   │
 │   ├── tools/
-│   │   ├── mac_tools.py         # macOS GUI control (click, type, open app, screenshot)
+│   │   ├── mac_tools.py         # Desktop GUI control (click, type, open app, screenshot)
 │   │   ├── browser_aci.py       # High-level compound browser tools (ACI layer)
 │   │   ├── browser_tools.py     # Raw browser DOM tools
 │   │   ├── file_tools.py        # File read/write/search
@@ -478,7 +468,7 @@ CIARA is split into three layers that communicate over WebSockets:
 ┌─────────────────────────────────────────────────────────────┐
 │  PYTHON BACKEND  (local_server.py)                          │
 │  Wake word (Picovoice) · STT (Google) · SPAV Agent V2      │
-│  macOS tools · Memory · TTS streaming                       │
+│  Desktop tools · Memory · TTS streaming                       │
 └────────────────────────┬────────────────────────────────────┘
                          │  JSON messages over WebSocket
                          ▼
@@ -513,7 +503,7 @@ CiaraAgentV2 (core_v2.py)
          │
          ▼
 TaskPlanner (task_planner.py)
-  → Gemini Pro generates a MilestonePlan:
+  → Gemma 4 powerful tier generates a MilestonePlan:
     Milestone 1: Open Amazon and search for AirPods
     Milestone 2: Extract and return the top results
          │
@@ -567,13 +557,13 @@ Three layers run in parallel before every LLM call:
 |-------|--------|-----------------|---------|
 | L1 | AppleScript (`osascript`) | Active app name, window title, browser URL | ~50ms |
 | L2 | Chrome extension DOM snapshot | Page text, selected text, element refs | ~200ms |
-| L3 | Gemini Vision (screenshot) | Full visual understanding of screen | ~1s (on demand only) |
+| L3 | Gemma 4 vision (screenshot) | Full visual understanding of screen | ~1s (on demand only) |
 
 The combined `ContextSnapshot` is serialised into a compact structured block and injected into every LLM system prompt so the model always knows exactly what's on screen.
 
 ### Stage 2 — Plan (Milestone Planning)
 
-`TaskPlanner` calls Gemini Pro with the user's intent + perceived context and generates a `MilestonePlan` — a list of `Milestone` dataclasses:
+`TaskPlanner` calls Gemma 4 powerful tier with the user's intent + perceived context and generates a `MilestonePlan` — a list of `Milestone` dataclasses:
 
 ```python
 @dataclass
@@ -592,7 +582,7 @@ Each milestone runs its own LLM micro-loop in `MilestoneExecutor`:
 
 1. Show the LLM: milestone goal + success signal + available tools + results so far
 2. LLM picks the next tool to call (or declares the milestone done)
-3. Tool executes (macOS API / Chrome extension / web)
+3. Tool executes (desktop API / Chrome extension / web)
 4. Result fed back to LLM
 5. Repeat until the success signal is satisfied or the safety cap (50 actions) is hit
 
@@ -608,57 +598,54 @@ After every tool call, `ToolVerifier` checks:
 
 ### Model Routing
 
-The `ModelRouter` classifies every incoming request before execution and picks one of four tiers:
+The `ModelRouter` classifies every incoming request before execution and picks the right Gemma 4 runtime tier:
 
 | Tier | Model | When used |
 |------|-------|-----------|
-| ROUTER | `gemini-2.5-flash` | Classifies every request (FAST vs POWERFUL) |
-| FAST | `gemini-3-flash-preview` | Open app, volume, brightness, one-liner facts |
-| POWERFUL | `gemini-3.1-pro-preview-customtools` | Everything complex, multi-step, or browser-related |
-| FALLBACK | `gemini-2.5-pro` | Emergency fallback on POWERFUL model failure |
+| ROUTER | `gemma-4-26b-a4b-it` or configured fast model | Classifies every request (FAST vs POWERFUL) |
+| FAST | `gemma-4-26b-a4b-it` or local equivalent | Open app, volume, brightness, one-liner facts |
+| POWERFUL | `gemma-4-31b-it` or configured powerful model | Complex, multi-step, browser, screen, and multimodal tasks |
+| LOCAL | Ollama / llama.cpp OpenAI-compatible endpoint | Private or self-hosted Gemma 4-compatible local inference |
 
-Only ~5–10% of requests ever go to FAST. The router is deliberately biased toward POWERFUL — routing a simple task there costs cents more, but routing a complex task to FAST causes failure.
-
+Only a small share of requests should go to FAST. The router is deliberately biased toward POWERFUL because routing a complex task to the weak path causes failures.
 ---
 
 ## 12. Google APIs & Local Data
 
-CIARA still calls **Google APIs** for intelligence and voice, but **sessions, vault, screenshots, plans, and milestones are stored on disk** under `CIARA_DATA_DIR`.
+CIARA can call Google APIs for Gemma 4 inference and voice, but sessions, vault, screenshots, plans, and milestones are stored on disk under `CIARA_DATA_DIR`.
 
-### 1. Gemini API — the AI brain
+### 1. Gemma 4 model routing - the AI brain
 
-Every intelligent decision goes through **Google Gemini** via the `google-genai` Python SDK (`backend/providers/gemini.py`):
+CIARA routes intelligent decisions through Gemma 4 via Google GenAI or local OpenAI-compatible runtimes (`backend/providers/router.py`, `backend/providers/gemini.py`, `backend/providers/openai_compatible.py`):
 
-- **Gemini 2.5 Flash** — fast classifier (routes requests in ~500ms)
-- **Gemini 3 Flash Preview** — simple task execution (open app, set volume)
-- **Gemini 3.1 Pro Preview** — complex reasoning, browser tasks, multimodal, native function calling
-- **Gemini 2.5 Pro** — emergency fallback
+- **Fast tier** - routing and simple execution, defaulting to `gemma-4-26b-a4b-it`.
+- **Powerful tier** - complex reasoning, browser tasks, screen understanding, and multimodal work, defaulting to `gemma-4-31b-it`.
+- **Local tier** - Ollama or llama.cpp/OpenAI-compatible endpoints for private and self-hosted workflows.
 
-The Pro model uses **native function calling** — it returns structured JSON (`{tool_name, args}`) rather than free text, so the executor can directly call the right tool without any text parsing.
+The provider interface supports tool/function calls so the executor can directly call the right tool instead of parsing free text.
 
-### 2. Google Cloud Text-to-Speech — voice output
+### 2. Google Cloud Text-to-Speech - voice output
 
-Spoken responses use **Google Neural2** voices via `google-cloud-texttospeech` SDK (`backend/voice/tts.py`):
+Spoken responses use Google Cloud Text-to-Speech when configured:
 
-- The response is split into sentences
-- All sentences are synthesized **concurrently** (parallel API calls)
-- Audio chunks are yielded in order as they finish — the first sentence plays while the rest are still being generated, creating a seamless streaming feel
-- Output format: OGG/Opus (plays natively in Chromium without any decoder library)
-- Default voice: `en-US-Neural2-J` (natural, conversational)
+- The response is split into sentences.
+- Sentences can be synthesized concurrently.
+- Audio chunks are yielded in order as they finish.
+- Output format: OGG/Opus.
 
 ### 3. Local persistence & vault recall
 
-The desktop server keeps durable state in folders such as `sessions/`, `vault/`, `screenshots/`, `plans/`, `milestones/`, and `memories/` (see `backend/runtime_paths.py`). Optional **TF-IDF vault recall** prefixes agent prompts with relevant vault snippets (`backend/servers/local_augment.py`, formatted via `backend/agent/rag.py`). Set `CIARA_DISABLE_LOCAL_VAULT_RAG=1` to turn that off.
+The desktop server keeps durable state in folders such as `sessions/`, `vault/`, `screenshots/`, `plans/`, `milestones/`, and `memories/` (see `backend/runtime_paths.py`). Optional TF-IDF vault recall prefixes agent prompts with relevant vault snippets (`backend/servers/local_augment.py`, formatted via `backend/agent/rag.py`). Set `CIARA_DISABLE_LOCAL_VAULT_RAG=1` to turn that off.
 
 ### Infrastructure Summary
 
-```
-Your Mac
-  ├── Electron overlay (UI, audio, local tools)
-  └── local_server.py (Python WebSocket backend)
-          ├── Gemini API ─────────────────────► Google AI Studio
-          ├── Google Cloud TTS ───────────────► Neural2 voice synthesis
-          └── Disk-backed memory / vault ─────► CIARA_DATA_DIR
+```text
+Your desktop
+  - Electron overlay (UI, audio, local tools)
+  - local_server.py (Python WebSocket backend)
+      - Gemma 4 API via Google GenAI or local Ollama/llama.cpp-compatible runtime
+      - Optional Google Cloud TTS
+      - Disk-backed memory / vault under CIARA_DATA_DIR
 ```
 
 ---
@@ -671,15 +658,15 @@ Your Mac
 |-------|-----------|-----------|
 | Desktop shell | **Electron 36** | True OS-level transparent overlay; `setIgnoreMouseEvents` for click-through; Chromium renderer for CSS glassmorphism + KaTeX math |
 | UI | **Vanilla JS + CSS** | No framework overhead; direct DOM manipulation for 60fps state transitions |
-| Backend | **Python 3.13 + asyncio + websockets** | Picovoice SDK is Python-only; `pyobjc` is the gold standard for macOS Accessibility API; `asyncio` gives clean concurrent I/O |
-| AI provider | **Google Gemini** | Native function calling; multimodal; same credentials for TTS + embeddings + cloud; fastest Flash model for routing |
-| macOS control | **AppleScript + pyobjc (Quartz/AppKit)** | AppleScript covers 90% of app control; Quartz Accessibility API handles the rest (system controls, fine-grained UI) |
-| Wake word | **Picovoice Porcupine** | On-device, low-power, custom wake word ("Hey CIARA"); no audio leaves the Mac for detection |
+| Backend | **Python 3.13 + asyncio + websockets** | Local agent runtime, browser bridge, voice pipeline, tool execution, and clean concurrent I/O |
+| AI provider | **Gemma 4 via Google GenAI, Ollama, or llama.cpp/OpenAI-compatible runtimes** | Tool calling, multimodal screen reasoning, hybrid cloud/local deployment, and provider choice |
+| Desktop control | **Windows APIs, AppleScript, pyobjc/Quartz, screenshots, accessibility** | Gives CIARA a fallback ladder for app launching, keyboard, mouse, visual targeting, and native UI control |
+| Wake word | **Picovoice Porcupine** | On-device, low-power, custom wake word ("Hey CIARA"); no audio leaves the device for detection |
 | Voice output | **Google Cloud TTS Neural2** | Natural prosody; concurrent sentence synthesis for streaming feel; OGG/Opus output plays natively in Chromium |
 | Browser bridge | **Chrome Extension MV3** | Bridges the real browser the user has open (with all their logged-in state and cookies) rather than a headless browser |
 | Persistence | **Local disk (`CIARA_DATA_DIR`)** | Sessions, vault JSON, screenshots, plans/milestones — no hosted database in this tree |
-| Vault recall | **TF-IDF + `rag.format_vault_results_for_prompt`** | Lightweight recall for desktop prompts; optional Gemini embeddings remain available in `rag.py` for advanced use |
-| Distribution | **electron-builder** | Universal binary (ARM + Intel); notarization hook; ship DMG + extension zip from `dist/` |
+| Vault recall | **TF-IDF + `rag.format_vault_results_for_prompt`** | Lightweight recall for desktop prompts; optional provider embeddings remain available in `rag.py` for advanced use |
+| Distribution | **electron-builder** | Builds Windows installers and macOS DMGs; ships app and extension artifacts from `dist/` |
 
 ### Key Design Decisions
 
@@ -696,8 +683,8 @@ A step plan tells the LLM exactly which tool calls to make. A milestone plan tel
 **Why a separate Chrome extension instead of Electron's browser?**
 CIARA is a desktop overlay, not a browser. The Chrome extension bridges the real browser the user already has open, complete with their logged-in sessions, cookies, and browser history. This means web automation works on any site, including banking and internal tools.
 
-**Why keep the whole agent on the Mac?**
-macOS-specific APIs (AppleScript, Quartz Accessibility, Picovoice) already require local execution. Running `local_server.py` keeps latency low, avoids shipping a multi-tenant cloud backend, and stores memory entirely under the user’s data directory.
+**Why keep the agent local-first?**
+A desktop agent needs low-latency access to the user session, browser, files, screen, voice, and OS automation APIs. Running `local_server.py` locally keeps actions responsive and stores memory under the user data directory while still allowing cloud or local Gemma 4 providers.
 
 **Memory architecture — four tiers**
 CIARA mirrors how humans actually remember things:
@@ -714,7 +701,7 @@ The content script assigns a stable `ref` ID to every interactive element on eve
 
 ---
 
-## 14. Building a DMG for Distribution
+## 14. Building Release Artifacts
 
 ### App Icon
 
@@ -796,7 +783,7 @@ Leave the env vars unset. The build still produces a working unsigned DMG. Custo
 
 This pipeline:
 1. **Packages the Chrome extension** → `dist/ciara-browser-bridge.zip` (with an `INSTALL.md` guide inside for customers)
-2. **Builds the signed + notarized DMG** (when signing env vars are set) → `dist/CIARA-x.x.x-universal.dmg`
+2. **Builds the signed + notarized macOS DMG** (when signing env vars are set) → `dist/CIARA-x.x.x-universal.dmg`
 
 Artifacts remain in `dist/`. Host them however you prefer (email, internal drive, your own CDN). This repository does **not** include `upload-gcs.mjs` or a Cloud Run deploy script.
 
@@ -807,14 +794,14 @@ Artifacts remain in `dist/`. Host them however you prefer (email, internal drive
 npm run dist:extension
 # → dist/ciara-browser-bridge.zip
 
-# 2. Build DMG
+# 2. Build release artifact
 npm run build:signed
 # → dist/CIARA-1.0.0-universal.dmg (version from package.json)
 ```
 
 ### Share with customers
 
-Send them the DMG (and optionally the extension zip) directly, or publish both files to your chosen download location.
+Send users the installer/DMG (and optionally the extension zip) directly, or publish both files to your chosen download location.
 
 ---
 

@@ -30,7 +30,7 @@ class LLMResponse:
     tool_calls: list[ToolCall] = field(default_factory=list)
     provider: str = ""
     error: Optional[str] = None
-    # Raw model response parts — needed for Gemini 3 thought signatures
+    # Raw model response parts - needed for provider-specific thought signatures
     raw_model_parts: Optional[list] = None
 
     @property
